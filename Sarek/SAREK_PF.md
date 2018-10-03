@@ -15,6 +15,9 @@ pandoc
  - install.packages("VennDiagram")
  - install.packages("htmlTable")
  - install.packages("kableExtra")
+ - install.packages("fst")
+ - install.packages("tictoc")
+ - install.packages("getopt")
 
  - source("https://bioconductor.org/biocLite.R")
  - biocLite("VariantAnnotation")

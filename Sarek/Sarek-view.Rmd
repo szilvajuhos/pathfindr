@@ -8,6 +8,8 @@ output:
       df_print: paged
 editor_options: 
   chunk_output_type: console
+params:
+  reference_data: './reference_data'
 ---
 
 <!-- This script reads from a folder containing (VEP+snpEff) annotated CAW (aka Sarek) output, including copy number from ControlFreec and Ascat, structural variation from Manta, somatic point mutations from Mutact 2 and Strelka, and germline mutations from HaplotypeCaller.-->
@@ -154,7 +156,23 @@ rm(files)
 
 ### Load dependencies
 <!-- Dependencies -->
-```{r load_dependencies}
+```{r load_dependencies and command line options}
+write("##########################################################",stderr())
+# use str(knitr::opts_knit$get()) to get knitr options
+write("Run parameters: ",stderr())
+
+ref_data <- params$reference_data
+write(paste("Reference directory: ",ref_data),stderr())
+
+sample_dir <- knitr::opts_knit$get("root.dir")
+write(paste("Sample dir: ",sample_dir),stderr())
+
+#q(status=0)
+
+write("##########################################################",stderr())
+write("Loading libraries ...",stderr())
+library(tictoc)
+tic("Loading libraries")
 library(data.table)
 library(ggplot2); theme_set(theme_light())
 library(grid)
@@ -166,6 +184,7 @@ library(knitr)
 library(htmlTable)
 library(kableExtra)
 library(stringr)
+toc()
 
 
 makelinks <- function(strings,sep='&') {
@@ -274,33 +293,42 @@ if (reference_genome=='GRCh38') chrsz <- data.table(
 
 ```
 
-<!-- Reference data files TODO: serialize with fst http://www.fstpackage.org/ -->
+<!-- Reference data files TODO: serialize somehow -->
 ```{r load_reference}
-snptable         = fread('reference_data/private/swegen_snp_counts.csv',key='name')
-swegen_manta_all = fread('reference_data/private/swegen_sv_counts.csv',key='name')
+snp_data = paste(ref_data,'private/swegen_snp_counts.csv',sep="")
+write(paste("Loading SNP data ",snp_data),stderr());
+snptable         = fread( snp_data,key='name')
+
+sv_data = paste(ref_data,'private/swegen_sv_counts.csv',sep="")
+write(paste("Loading structural variants data ",sv_data),stderr());
+swegen_manta_all = fread(sv_data,key='name')
+
 #allgenes        = fread('reference_data/genes_ensemble_canonical.csv',key='name')
-tumorgenes       = fread('reference_data/cancer_gene_census.csv',key='Gene Symbol')
+
+tumorgenes_data = paste(ref_data,'cancer_gene_census.csv',sep='')
+write(paste("Tumor genes data ",tumorgenes_data),stderr());
+tumorgenes       = fread(tumorgenes_data,key='Gene Symbol')
+
 tumorgenes$chr=paste0('chr',str_replace(string=tumorgenes$`Genome Location`,pattern = ':.*',replacement = ''))
 temp=str_replace(string=tumorgenes$`Genome Location`,pattern = '.*:',replacement = '')
 tumorgenes$start=as.numeric(str_replace(string=temp,pattern = '.*-',replacement = ''))
 tumorgenes$end=as.numeric(str_replace(string=temp,pattern = '-.*',replacement = ''))
 tumorgenes$cumstart=NA; tumorgenes$cumend=NA
+
 for (i in 1:nrow(chrsz)) {
     ix <- tumorgenes$chr==chrsz$chr[i]
     tumorgenes$cumstart[ix] <- tumorgenes$start[ix]+chrsz$starts[i]
     tumorgenes$cumend[ix] <- tumorgenes$end[ix]+chrsz$starts[i]
   }
 
-if (project=='BTB') {
-  local_tumorgenes=fread('reference_data/2018_gene_list_tere_ref.csv',key='Gene')[Gene!='',1:2]
-  alltumorgenes=unique(c(tumorgenes$`Gene Symbol`,local_tumorgenes$Gene))
-  alltier1=union(tumorgenes[Tier==1,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==1,Gene])
-  alltier2=union(tumorgenes[Tier==2,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==2,Gene])
-} else {
-  alltumorgenes=unique(c(tumorgenes$`Gene Symbol`))
-  alltier1=tumorgenes[Tier==1,`Gene Symbol`]
-  alltier2=tumorgenes[Tier==2,`Gene Symbol`]
-}
+# Local Tumor Genes
+
+local_tumorgenes_data = paste(ref_data,'2018_gene_list_tere_ref.csv',sep='')
+write(paste("Local tumor genes data ",local_tumorgenes_data),stderr());
+local_tumorgenes=fread(local_tumorgenes_data,key='Gene')[Gene!='',1:2]
+alltumorgenes=unique(c(tumorgenes$`Gene Symbol`,local_tumorgenes$Gene))
+alltier1=union(tumorgenes[Tier==1,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==1,Gene])
+alltier2=union(tumorgenes[Tier==2,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==2,Gene])
 
 allfusion=tumorgenes[grep('fusion',`Role in Cancer`),`Gene Symbol`]
 allfusionpairs=NULL
@@ -310,11 +338,18 @@ for (i in 1:length(allfusion)) {
   allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
 }
 alltsg=tumorgenes[grep('TSG',`Role in Cancer`),`Gene Symbol`]
-hotspots_inframe=unique(fread('reference_data/hotspots_v2_inframe.csv')[,.(Hugo_Symbol,Amino_Acid_Position)])
+
+# In frame hotspots
+
+hotspots_inframe_data = paste(ref_data,'hotspots_v2_inframe.csv',sep='')
+hotspots_snv_data = paste(ref_data,'hotspots_v2_snv.csv',sep='')
+
+write(paste("Reading in frame hotspots from ",hotspots_inframe_data, "and", hotspots_snv_data),stderr())
+hotspots_inframe=unique(fread(hotspots_inframe_data)[,.(Hugo_Symbol,Amino_Acid_Position)])
 hotspots_inframe$start=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '-[0-9]*',replacement = ''))
 hotspots_inframe$end=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '[0-9]*-',replacement = ''))
 hotspots_snv=unique(
-  fread('reference_data/hotspots_v2_snv.csv')[,.(Hugo_Symbol,Amino_Acid_Position)])[-grep('splice',Amino_Acid_Position)]
+  fread(hotspots_snv_data)[,.(Hugo_Symbol,Amino_Acid_Position)])[-grep('splice',Amino_Acid_Position)]
 hotspots_snv$pos <- as.numeric(hotspots_snv$Amino_Acid_Position)
 near_hotspots=NULL
 for (i in 1:nrow(hotspots_inframe)) 
@@ -326,9 +361,17 @@ for (i in 1:nrow(hotspots_snv))
   near_hotspots=c(near_hotspots,
                       paste(hotspots_snv$Hugo_Symbol[i],
                                  seq(hotspots_snv$pos[i]-2,hotspots_snv$pos[i]+2)))
-cosmic_coding    = fread('reference_data/cosmic_coding_table.csv',key = 'name')
-cosmic_noncoding = fread('reference_data/cosmic_noncoding_table.csv',key = 'name')
-cosmic_fusions   = fread('reference_data/cosmic_fusions_table.csv',key = 'name')
+
+# loading COSMIC stuff
+
+cosmic_coding_data    = paste(ref_data,'cosmic_coding_table.csv',sep='')
+cosmic_noncoding_data = paste(ref_data,'cosmic_noncoding_table.csv',sep='')
+cosmic_fusions_data   = paste(ref_data,'cosmic_fusions_table.csv',sep='')
+write(paste("Reading COSMIC data from ",cosmic_coding_data, ",", cosmic_noncoding_data, "and", cosmic_fusions_data),stderr())
+cosmic_coding    = fread(cosmic_coding_data,key = 'name')
+cosmic_noncoding = fread(cosmic_noncoding_data,key = 'name')
+cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
+q(satus=0)
 ```
 
 
