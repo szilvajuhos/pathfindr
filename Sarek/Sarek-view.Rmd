@@ -167,12 +167,9 @@ write(paste("Reference directory: ",ref_data),stderr())
 sample_dir <- knitr::opts_knit$get("root.dir")
 write(paste("Sample dir: ",sample_dir),stderr())
 
-#q(status=0)
 
 write("##########################################################",stderr())
-write("Loading libraries ...",stderr())
-library(tictoc)
-tic("Loading libraries")
+write("Loading libraries .. ",stderr())
 library(data.table)
 library(ggplot2); theme_set(theme_light())
 library(grid)
@@ -184,8 +181,6 @@ library(knitr)
 library(htmlTable)
 library(kableExtra)
 library(stringr)
-toc()
-
 
 makelinks <- function(strings,sep='&') {
   if (length(strings)>0) for (i in 1:length(strings)) if (strings[i]!='') {
@@ -371,7 +366,6 @@ write(paste("Reading COSMIC data from ",cosmic_coding_data, ",", cosmic_noncodin
 cosmic_coding    = fread(cosmic_coding_data,key = 'name')
 cosmic_noncoding = fread(cosmic_noncoding_data,key = 'name')
 cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
-q(satus=0)
 ```
 
 
