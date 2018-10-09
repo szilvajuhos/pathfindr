@@ -1066,7 +1066,7 @@ if (nrow(manta_tumor_table)>0) {
 <!-- Read the normal structural variant data -->
 ### Manta (normal)
 ```{r load_manta_normal, echo=FALSE}
-options(error = function() traceback(2))
+options(error=recover)
 if (project=='BTB') {
   manta_normal_table=NULL
   # first collect PASS ids from all samples
