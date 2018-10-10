@@ -1,6 +1,8 @@
 #!/bin/bash -x
 #R -e "rmarkdown::render('Sarek-view.Rmd',output_file='Sarek-output.html')"
 #R -e "rmarkdown::render('Sarek-view.Rmd',knit_root_dir='SAMPLES/PFtest',output_file='Sarek-output.html') " 
+# run like: 
+# ./runPF.sh -s `pwd`/SAMPLES/PFtest -o bugger.html -r `pwd`/reference_data/ 2>&1 | tee run.log
 
 usage() { echo "Usage: $0 [-r reference_data ] [-s sample_dir] [-o output.html] " 1>&2; exit 1; }
 

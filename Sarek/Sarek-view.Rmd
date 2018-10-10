@@ -9,7 +9,7 @@ output:
 editor_options: 
   chunk_output_type: console
 params:
-  reference_data: './reference_data'
+  reference_data: './reference_data/'
 ---
 
 <!-- This script reads from a folder containing (VEP+snpEff) annotated CAW (aka Sarek) output, including copy number from ControlFreec and Ascat, structural variation from Manta, somatic point mutations from Mutact 2 and Strelka, and germline mutations from HaplotypeCaller.-->
@@ -1090,7 +1090,9 @@ if (project=='BTB') {
     
     # Read counts
     srtable=as.data.table(g$SR)
-    colnames(srtable)=paste0('SplitReadSupport_',c('N')) # Verified on a test sample
+    bugger=paste0(SplitReadSupport_',c('N')) # Verified on a test sample
+    write(paste0("bugger ",bugger),stderr())
+    colnames(srtable)=bugger
     prtable=as.data.table(g$PR)
     colnames(prtable)=paste0('PairedReadSupport_',c('N'))
     
