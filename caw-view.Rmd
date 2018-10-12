@@ -47,10 +47,10 @@ cat('Sample:',basename(getwd()),'\tDirectory:',getwd(),'\nDate:',date())
 
 ## Project and reference genome
 
-#project='BTB'
+project='BTB'
 #project='AML-p'
 #project='AML-a'
-project='CLL'
+#project='CLL'
 
 if (project=='BTB') reference_genome='GRCh38' else reference_genome='hg19'
 
@@ -143,24 +143,39 @@ if (project == 'BTB') {
   
   # control freec files
   freec_Tratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_ratio.txt',files,perl = T)]
+  freec_Nratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_normal_ratio.txt',files,perl = T)][1]
   freec_Tbaf_file <- files[grep(pattern = '[TR].hg38.pileup.gz_BAF.txt',files,perl = T)]
   freec_Nbaf_file <- files[grep(pattern = '[BN].hg38.pileup.gz_BAF.txt',files,perl = T)][1]
   freec_info_file <- files[grep(pattern = 'hg38.pileup.gz_info.txt',files,perl = T)]
   freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",files,perl = T)]
+  write("FREEC files",stderr());
+  write(paste("freec_Tratio_file", freec_Tratio_file),stderr());
+  write(paste("freec_Nratio_file", freec_Nratio_file),stderr());
+  write(paste("freec_Tbaf_file",   freec_Tbaf_file),stderr());
+  write(paste("freec_Nbaf_file",   freec_Nbaf_file),stderr());
+  write(paste("freec_info_file",   freec_info_file),stderr());
+  write(paste("freec_cnv_file",    freec_cnv_file ),stderr());
+
   # Ascat files
   ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.LogR$",files)]
   ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.LogR$",files)][1]
   ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.BAF$",files)]
   ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.BAF$",files)][1]
   ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)]
+  write("ASCAT files: ",stderr())
+  write(paste("ascat_Tratio_file:",ascat_Tratio_file),stderr())
+  write(paste("ascat_Nratio_file:",ascat_Nratio_file),stderr())
+  write(paste("ascat_Tbaf_file:",ascat_Tbaf_file),stderr())
+  write(paste("ascat_Nbaf_file:",ascat_Nbaf_file),stderr())
+  write(paste("ascat_segment_file:",ascat_segment_file),stderr())
   # ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*02\\.LogR$",files)]
   # ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*01\\.LogR$",files)]
   # ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*02\\.BAF$",files)]
   # ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*01\\.BAF$",files)]
   # ascat_segment_file <- files[grep(pattern = "^.*Ascat.*02\\.cnvs\\.txt$",files)]
   # Manta structural variant files
-  manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vcf$",files,value = T)
-  manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vcf$",files,value = T)[1]
+  manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)
+  manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)[1]
   # Haplotype caller variant files
   haplotypecaller_T_file <- grep(pattern = ".*haplotypecaller.*[TR].*AF.*vep.ann.vcf$",files,value = T)
   # haplotypecaller_T_file <- 
@@ -247,12 +262,18 @@ tableWrapper <- function(table) {
     if (is.list(table$AD)) table$AD=unlist(lapply(table$AD,paste,collapse=', '))
   }
   
-  samples=sort(unique(table$sample))
-  
-  if (T) htmlTable(table, 
+  tableH = head(table,12)
+  samples=sort(unique(tableH$sample))
+   
+  if (T) htmlTable(tableH, 
             col.rgroup = c("none", "#F7F7F7"),
-            tspanner=paste('Rank score:',unique(table$rank_score)),
-            n.tspanner=rev(table(table$rank_score)))
+            tspanner=paste('Rank score:',unique(tableH$rank_score)),
+            n.tspanner=rev(table(tableH$rank_score)))
+ 
+#  if (T) htmlTable(table, 
+#            col.rgroup = c("none", "#F7F7F7"),
+#            tspanner=paste('Rank score:',unique(table$rank_score)),
+#            n.tspanner=rev(table(table$rank_score)))
   # if (length(samples)>1) htmlTable(table, 
   #           col.rgroup = c("none", "#F7F7F7"),
   #           n.rgroup='',
@@ -315,8 +336,8 @@ if (reference_genome=='GRCh38') chrsz <- data.table(
 
 <!-- Reference data files -->
 ```{r load_reference}
-snptable=fread('~/reports/reference_data/swegen_snp_counts.csv',key='name')
-swegen_manta_all=fread('~/reports/reference_data/swegen_sv_counts.csv',key='name')
+snptable=fread('~/reports/reference_data/private/swegen_snp_counts.csv',key='name')
+swegen_manta_all=fread('~/reports/reference_data/private/swegen_sv_counts.csv',key='name')
 #allgenes=fread('~/reports/reference_data/genes_ensemble_canonical.csv',key='name')
 tumorgenes=fread('~/reports/reference_data/cancer_gene_census.csv',key='Gene Symbol')
 tumorgenes$chr=paste0('chr',str_replace(string=tumorgenes$`Genome Location`,pattern = ':.*',replacement = ''))
@@ -1719,6 +1740,8 @@ if (exists('mutect2_file')) if (length(mutect2_file)>0) {
 ### Strelka
 <!-- Read annotated small variant data (Strelka, two files) -->
 ```{r load_strelka, echo=FALSE}
+write(paste("Strelka SNV",strelka_snv_file),stderr());
+write(paste("Strelka indel",strelka_indel_file),stderr());
 allpass=NULL
 vcfs=list()
 if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) for (s in 1:length(strelka_snv_file)) {
@@ -1732,14 +1755,18 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) for (s in 1:leng
   allpass=c(allpass,names(vcfs[[strelka_indel_file[s]]])[pass])
 }
 strelka_table=NULL
+write("Creating Strelka table",stderr())
 if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
+  write("processing Strelka SNVs",stderr());
   for (s in 1:length(strelka_snv_file)) {
     sample=strsplit(basename(strelka_snv_file[s]),'_somatic')[[1]][1]
     # first snvs
     vcf=vcfs[[strelka_snv_file[s]]]
     vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+    write(paste("Changing TUMOR and NORMAL", colnames(vcf)),stderr());
     if (!'TUMOR' %in% colnames(vcf)) colnames(vcf)=c('NORMAL','TUMOR') # assumption that normal comes first
     # Collect sample-unspecific data for the [PASS in any] IDs into a table
+    write(paste("colnames",colnames(vcf)), stderr());
     g=geno(vcf)
     rr=rowRanges(vcf)
     inf=info(vcf)
@@ -2425,25 +2452,27 @@ if (exists('mutect2_selected')) {
 
 &nbsp;
 
-```{r}
-cat('Strelka')
-t=strelka_selected[rank_score>0]
-if (nrow(t)>0){
-  t=data.table(Sample=t$sample,
-               Gene=t$SYMBOL,
-               Mutation=paste(t$Protein_position,t$Amino_acids),
-               'Rank score'=t$rank_score,
-               'Rank Terms'=t$rank_terms,
-               Allele_ratio=t$AFreq)
-  kable(t[Gene!=''], "html") %>%
-  kable_styling(bootstrap_options = "striped",position = "left") %>%
-  scroll_box(width = "900px", height = "300px")
+```{r Strelka selected}
+if (exists('haplotypecaller_selected')) {
+	cat('Strelka')
+	t=strelka_selected[rank_score>0]
+	if (nrow(t)>0){
+	  t=data.table(Sample=t$sample,
+		       Gene=t$SYMBOL,
+		       Mutation=paste(t$Protein_position,t$Amino_acids),
+		       'Rank score'=t$rank_score,
+		       'Rank Terms'=t$rank_terms,
+		       Allele_ratio=t$AFreq)
+	  kable(t[Gene!=''], "html") %>%
+	  kable_styling(bootstrap_options = "striped",position = "left") %>%
+	  scroll_box(width = "900px", height = "300px")
+	}
 }
 ```
 
 &nbsp;
 
-```{r}
+```{r haplotypecaller selected}
 
 if (exists('haplotypecaller_selected')) {
   cat('HaplotypeCaller')

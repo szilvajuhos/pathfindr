@@ -100,28 +100,28 @@ ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)
 # Manta structural variant files
 # the tumor file
 manta_tumor_file <- checkFileExistence(".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files)
-write(paste("Manta tumor file: ",manta_tumor_file),stdout())
+write(paste("Manta tumor file: ",manta_tumor_file),stderr())
 # The Manta normal file
 manta_normal_file <- checkFileExistence(".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$", files)
-write(paste("Manta normal file: ",manta_normal_file),stdout())
+write(paste("Manta normal file: ",manta_normal_file),stderr())
 
 # Haplotype caller variant files
 haplotypecaller_T_file <- checkFileExistence(".*haplotypecaller.*[TR].*AF.*vep.ann.vcf$",files)
-write(paste("HC tumor file: ",haplotypecaller_T_file),stdout())
+write(paste("HC tumor file: ",haplotypecaller_T_file),stderr())
 haplotypecaller_N_file <- checkFileExistence(".*haplotypecaller.*[NB].*AF.*vep.ann.vcf$",files)
-write(paste("HC normal file: ",haplotypecaller_N_file),stdout())
+write(paste("HC normal file: ",haplotypecaller_N_file),stderr())
 
 # snpEff+VEP Mutect2 file
 # mutect2_file <- grep(pattern = "^.*Annotation/VEP/mutect2_.*[TR]_vs_.*[BN]\\.vcf.*vcf$",files,value = T)[1]
 mutect2_file <- checkFileExistence(".*mutect2_.*AF.*vep.ann.vcf$",files)
-write(paste("Mutect2 file: ",mutect2_file),stdout())
+write(paste("Mutect2 file: ",mutect2_file),stderr())
 
 # snpEff + VEP Strelka snv file
 strelka_snv_file <- checkFileExistence(".*Strelka_.*_somatic_snvs.*AF.*vep.ann.vcf$",files)
-write(paste("Strelka SNVs file: ",strelka_snv_file),stdout())
+write(paste("Strelka SNVs file: ",strelka_snv_file),stderr())
 # snpEff + VEP Strelka indel file
 strelka_indel_file <- checkFileExistence(".*Strelka_.*_somatic_indels.*AF.*vep.ann.vcf$",files)
-write(paste("Strelka indels file: ",strelka_indel_file),stdout())
+write(paste("Strelka indels file: ",strelka_indel_file),stderr())
 
 
 rm(files)
@@ -547,12 +547,13 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
 ### Ascat
 <!-- Read ASCAT copy number data -->
 ```{r load_ascat}
-  ascat_cnv=NULL
-  samplename=NULL
-  if (length(ascat_Tratio_file)>0) {
-    # extract sample names
-    for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
- 
+
+ascat_cnv=NULL
+samplename=NULL
+if (length(ascat_Tratio_file)>0) {
+  # extract sample names
+  for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
+  
   ascat_tratio=NULL; ascat_tbaf=NULL; ascat_cnv=NULL
   for (s in 1:length(samplename)) {
     # segmented copy number
@@ -565,6 +566,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
     these_cnvs=temp # for use below
     # tumor log ratio
     temp=fread(file = ascat_Tratio_file[s])[,-1]
+    #if (project=='AML') temp$Chr=paste0('chr',temp) 
     colnames(temp)[3]='LogR'
     temp$sample=samplename[s]
     temp=temp[order(Chr,Position),c(4,1:3)]
@@ -574,6 +576,8 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
     temp$MinorCopy=1
     for (i in 1:nrow(these_cnvs)) {
       ix=temp$Chr==these_cnvs$chr[i] & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
+      if (!any(ix)) 
+        ix=temp$Chr==substr(these_cnvs$chr[i],4,6) & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
       temp$CopyNumber[ix]=these_cnvs$nMajor[i]+these_cnvs$nMinor[i]
       temp$MinorCopy[ix]=these_cnvs$nMinor[i]
     }
@@ -598,7 +602,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
   # join (T) log ratio and (T) BAF
   #ascat_tratio=merge(ascat_tratio,ascat_tbaf,all.x=T)
   #ascat_tratio=merge(ascat_tratio,ascat_nbaf,all.x=T)
-
+  
   # manipulate for plot:
   ascat_tratio$cumstart=ascat_tratio$Position
   ascat_tbaf$cumstart=ascat_tbaf$Position
@@ -613,9 +617,9 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
     ix=ascat_nbaf$Chr==chrsz$chr[i]
     ascat_nbaf$cumstart[ix]=ascat_nbaf$Position[ix]+chrsz$starts[i]
   }
+ 
 
-
-
+  
   # smooth data for view
   ascat_binned=NULL
   for (sample in samplename) for (i in 1:nrow(chrsz)) {
@@ -626,7 +630,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
       cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
       tratio=NA,
       tmaf=NA)
-
+    
     tempLogR=ascat_tratio[sample][Chr==chrsz$chr[i]]
     tempBAF=ascat_tbaf[sample][Chr==chrsz$chr[i]]
     tempBAF$BAF=0.5+abs(tempBAF$BAF-0.5)
@@ -646,7 +650,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
   }
   setkey(ascat_binned,'sample')
 
-
+  
   ascat_loh=ascat_cnv[nMinor==0 & nMajor<4]
   ascat_loh$chr=paste0('chr',ascat_loh$chr)
   if (!exists('freec_loh')) freec_loh=ascat_loh # to make sure LOH is available if theres no freec
@@ -656,7 +660,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
   cnvs$rank_score <- 0
   cnvs$rank_terms <- ''
   cnvs$cancer_genes <- ''
-
+  
   for (i in which(cnvs$endpos-cnvs$startpos < 50e6)) {
     genes=tumorgenes[chr==cnvs$chr[i] & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
     if (length(genes)>0) { # if any of our cancer genes
@@ -669,15 +673,15 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
         cnvs$rank_terms[i]='T2_gene'
       }
     }
-
+    
     # if the effect is focal
     if (cnvs[i,endpos-startpos]<3e6) {
       cnvs$rank_score[i]=cnvs$rank_score[i]+1
       cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
     }
-
-
-
+    
+    
+    
     # if the effect is loss/gain/amp etc
     if (cnvs[i,nMajor+nMinor]==0) {
       cnvs$rank_score[i]=cnvs$rank_score[i]+2
@@ -693,9 +697,9 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
       cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
     }
   }
-
+  
   ascat_cnv=cnvs[order(rank_score,decreasing = T)]
-  fwrite(ascat_cnv,file=paste0(sampleData$name,'_ascat_cnv.csv'))
+  if (write_tables) fwrite(ascat_cnv,file=paste0(sampleData$name,'_ascat_cnv.csv'))
 
   tableWrapper(ascat_cnv)
 }
@@ -1102,296 +1106,6 @@ if (!is.null(manta_tumor_table)) if (nrow(manta_tumor_table)>0) {
 <!-- Read the normal structural variant data -->
 ### Manta (normal)
 ```{r load_manta_normal, echo=FALSE}
-#manta_normal_table=NULL
-## first collect PASS ids from all samples
-#allpass=NULL
-#vcfs=list()
-#write("Collecting PASS ids from all samples",stderr())
-#if (length(manta_normal_file)>0) for (s in 1:length(manta_normal_file)) {
-#  vcfs[[manta_normal_file[s]]]=readVcf(file = manta_normal_file[s],genome = reference_genome)
-#  pass=rowRanges(vcfs[[manta_normal_file[s]]])$FILTER=='PASS'
-#  allpass=c(allpass,names(vcfs[[manta_normal_file[s]]])[pass])
-#}
-#
-##write(paste("VCFS",vcfs),stdout())
-##getAllPass <- function(vcfFiles, aVCF) {
-##  if (length(aVCF)>0) for (s in 1:length(aVCF)) {
-##    vcfFiles[[aVCF[s]]]=readVcf(file = aVCF[s],genome = reference_genome)
-##    pass=rowRanges(vcfFiles[[aVCF[s]]])$FILTER=='PASS'
-##    names(vcfFiles[[aVCF[s]]])[pass]
-##  }
-##}
-#
-## then collect variants...
-#write("Collecting variants",stderr())
-#if (length(manta_normal_file)>0) for (s in 1:length(manta_normal_file)) {
-#  sample=strsplit(basename(manta_normal_file[s]),'[.]')[[1]][1]
-#    
-#  vcf=vcfs[[manta_normal_file[s]]]
-#  vcf=vcf[names(vcf) %in% allpass]
-#    
-#  g=geno(vcf)
-#  inf=info(vcf)
-#  rr=rowRanges(vcf)
-#    
-#    # Read counts
-#  srtable=as.data.table(g$SR)
-#  prtable=as.data.table(g$PR)
-#  
-#  write("Calculating split reads and paired reads supports",stderr());
-#  colnames(srtable)=paste0('SplitReadSupport_',c('N')) # Verified on a test sample
-#  colnames(prtable)=paste0('PairedReadSupport_',c('N'))
-#    
-#  # Calculate allele ratio
-#  write("Calculating allele ratio",stderr())
-#  temp=data.table(
-#    pr.ref=sapply(prtable$PairedReadSupport_N,"[",1),
-#    sr.ref=sapply(srtable$SplitReadSupport_N,"[",1),
-#    pr.alt=sapply(prtable$PairedReadSupport_N,"[",2),
-#    sr.alt=sapply(srtable$SplitReadSupport_N,"[",2)
-#  )
-#  AFreq=apply(temp[,3:4],1,sum,na.rm=T)/
-#    (apply(temp[,3:4],1,sum,na.rm=T)+apply(temp[,1:2],1,sum,na.rm=T))
-#    
-#  # make table of variants
-#  write("Make a table of variants",stderr())
-#  sv_table=cbind(
-#    data.table(ID=as.character(names(vcf)),
-#               sample,
-#               chr=as.character(seqnames(rr))),
-#    as.data.table(rr)[,-1],
-#    AFreq,prtable,srtable,
-#    data.table(Swegen_count=rep(NA,length(vcf)),
-#               rank_score=0,
-#               rank_terms='',
-#               LOH=''),
-#    as.data.table(inf)
-#  )
-#  sv_table$cumstart=sv_table$start
-#  sv_table$cumend=sv_table$end
-#  sv_table$altchr=sv_table$chr
-#  sv_table$altpos=sv_table$END
-#  sv_table$plot=F
-#  sv_table$arc= -1
-#  
-#  # Filter out variants seen 2+ (?) times in reference data
-#  write("Filtering out duplicates",stderr())
-#  ## Key has only chr,start,end
-#  key=sv_table[,c('chr','start','end')]
-#  key$chr=substr(key$chr,4,6)
-#  key$imprecise='(pr)'
-#  ## If imprecise, round the pos to 10
-#  ix=sv_table$IMPRECISE==T
-#  key$imprecise[ix]='(impr)'
-#  key$start[ix]=round(key$start[ix]/10)*10
-#  key$end[ix]=round(key$end[ix]/10)*10
-#  key=paste(key$chr,key$start,key$end,key$imprecise)
-#    
-#  # put in Swegen count
-#  write("Add SweGen counts",stderr())
-#  sv_table$Swegen_count=swegen_manta_all[key,value]
-#  sv_table$Swegen_count[is.na(sv_table$Swegen_count)]=0
-#  ## do the filter
-#  sv_table <- sv_table[Swegen_count<2]
-#    
-#  if (nrow(sv_table)>0) {
-#    # loop through all and extract endpoint chr and pos
-#    for (i in 1:nrow(sv_table)) try( {                    # <----  sometimes error here, so try..
-#      t=strsplit(x = sv_table$ALT[[i]],split = ':')[[1]]
-#      if (length(t)>1 & t[1]!="<DUP") {
-#        tchr=strsplit(x = t[1],split = 'chr')[[1]][2]
-#        if (is.na(tchr)) tchr=strsplit(x = t[1],split = 'CHR')[[1]][2]
-#        sv_table$altchr[i]=paste0('chr',tchr)
-#        tt=strsplit(t[2],'\\[')[[1]][1]; tt=strsplit(tt[1],'\\]')[[1]][1]
-#        sv_table$altpos[i]=as.numeric(tt)
-#      }
-#    }, silent=T)
-#    # for each chromosome get cumulative pos
-#    sv_table$altcumpos=sv_table$altpos
-#    for (i in 1:nrow(chrsz)) {
-#      ix=sv_table$chr==chrsz$chr[i]
-#      if (sum(ix)>0) {
-#        sv_table$cumstart[ix]=sv_table$start[ix]+chrsz$starts[i]
-#        sv_table$cumend[ix]=sv_table$end[ix]+chrsz$starts[i]
-#      }
-#      ix=sv_table$altchr==chrsz$chr[i]
-#      if (sum(ix)>0) {
-#        sv_table$altcumpos[ix]=sv_table$altpos[ix]+chrsz$starts[i]
-#      }
-#    }
-#    # decide how it is to be plotted (not represented elsewhere, up or down arc)
-#    for (i in 1:nrow(sv_table)) {
-#      if (sv_table$chr[i]==sv_table$altchr[i]) {
-#        # intrachromosomal: plot always, with "positive" arc
-#        sv_table$plot[i]=T
-#        sv_table$arc[i]=1 
-#      } else if (sv_table$altcumpos[i] > sv_table$cumstart[i]) {
-#        # interchromosomal: plot if mate is to right (else mate will be plotted) with negative arc
-#        sv_table$plot[i]=T 
-#        sv_table$arc[i]=-1 
-#      }
-#    }
-#    
-#    write("Add snpEff annotations",stderr())
-#    # snpEff annotation is in the ANN column.
-#    h=strsplit(info(header(vcf))['ANN',][,3],'annotations: \'')[[1]][2]
-#    snpEff_header=trimws(strsplit(h,'\\|')[[1]])
-#      
-#    # snpEff annotation is put in snpEff_table
-#    snpEff_table=matrix(data = NA,nrow = length(unlist(sv_table$ANN)),ncol = length(snpEff_header)+1)
-#    colnames(snpEff_table)=c('ID',snpEff_header)
-#    row=1
-#    for (i in 1:nrow(sv_table)) { # for each variant
-#      # for each VEP annotation:
-#      for (j in 1:length(sv_table$ANN[[i]]))  if (length(sv_table$ANN[[i]])>0) {
-#        line=strsplit(sv_table$ANN[[i]][j],'\\|')[[1]]
-#        snpEff_table[row,1]=sv_table$ID[i]
-#        snpEff_table[row,1+(1:length(line))]=line
-#        row=row+1
-#      }
-#    }
-#    snpEff_table=unique(as.data.table(snpEff_table))
-#    
-#    # Filter out annotations of certain types where the ID has >N annotations of that type
-#    write("Filter annotations",stderr())
-#    ids=unique(snpEff_table$ID)
-#    for (id in ids) {
-#      common=c('protein_protein_contact', 'duplication', 'structural_interaction_variant', 'inversion',
-#               'transcript_ablation', 'feature_ablation', 'sequence_feature', 
-#               'intergenic_region', 'downstream_gene_variant', 'upstream_gene_variant')
-#      annotations=snpEff_table[ID==id,Annotation] # the annotations of this variant
-#      table=table(annotations[annotations %in% common])
-#      table=table[table>50] # the common annotations that appear >N times for this variant
-#      if (length(table)>0) {
-#        remove=which(snpEff_table$ID==id & snpEff_table$Annotation %in% names(table))
-#        snpEff_table=snpEff_table[remove[-1],] # saves one to make sure the variant has some annotation
-#      }
-#    }
-#    
-#    # Add to data (all samples, one table)
-#    manta_normal_table=rbind(manta_normal_table,merge(sv_table,snpEff_table,by='ID',all=T))
-#    setkey(manta_normal_table,'sample')
-#  }
-#}# done parsing each sample
-#  
-#  
-## Prepare ranking and (some more) filtering
-#write("Prepare ranking",stderr())
-#if (nrow(manta_normal_table)>0) {
-#  
-#  # ## Make table with most important info for ranking, and report
-#  # selected <- unique(manta_normal_table[,.(ID,sample,SVTYPE,chr,start,REF,ALT,AFreq,PairedReadSupport_T,SplitReadSupport_T,
-#  #                        Swegen_count,Rank_score='',Rank_terms='',Gene_Name,Annotation,Annotation_Impact)])
-#  selection=manta_normal_table[!is.na(Annotation)]
-#  
-#  if (nrow(selection)>0) {
-#    # Known cancer genes affect ranking by +1
-#    write("Known cancer genes",stderr());
-#    for (gene in unique(selection$Gene_Name)) if (!is.na(gene)) if (gene!='') {
-#      ix=selection$Gene_Name==gene
-#      gene=sort(strsplit(gene,'&')[[1]])
-#      # cosmic/local Tier2:
-#      if (any(gene %in% alltier2)) {
-#        selection$rank_score[ix]=2
-#        selection$rank_terms[ix]='T2_gene'
-#      }
-#      # tier 1 top priority:
-#      if (any(gene %in% alltier1)) {
-#        selection$rank_score[ix]=2
-#        selection$rank_terms[ix]='T1_gene'
-#      }
-#    }
-#    
-#    
-#    # Add high impact
-#    write("Add high impact",stderr())
-#    ix=selection$Annotation_Impact=='HIGH'
-#    if (any(ix)) {
-#      selection$rank_score[ix]=selection$rank_score[ix]+2
-#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'high_impact')
-#    }
-#    # Add moderate impact
-#    write("Add moderate impact",stderr())
-#    ix=selection$Annotation_Impact=='MODERATE'
-#    if (any(ix)) {
-#      selection$rank_score[ix]=selection$rank_score[ix]+1
-#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'moderate_impact')
-#    }
-#    
-#    # +1 for focal
-#    write("Add focal",stderr())
-#    ix=selection$chr==selection$altchr & selection$end-selection$start < 3e6 & selection$altpos-selection$start < 3e6
-#    if (any(ix)) {
-#      selection$rank_score[ix]=selection$rank_score[ix]+1
-#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'focal')
-#    }
-#    
-#    # cosmic_>xx, fusion_gene or just fusion
-#    write("Cosmic fusion genes",stderr())
-#    ix=grep('fusion',selection$Annotation)
-#    if (length(ix)>0) for (i in ix) if (selection$Gene_Name[i]!='') {
-#      gene=sort(strsplit(selection$Gene_Name[i],'&')[[1]])
-#      if (paste(gene,collapse = ' ') %in% cosmic_fusions[value>5,name]) {
-#        selection$rank_score[i]=selection$rank_score[i]+3
-#        selection$rank_terms[i]=paste(selection$rank_terms[i],'cosmic_>5')
-#      } else if (paste(gene,collapse = ' ') %in% cosmic_fusions$name) {
-#        selection$rank_score[i]=selection$rank_score[i]+2
-#        selection$rank_terms[i]=paste(selection$rank_terms[i],'cosmic_>1')
-#      }
-#      if (paste(gene,collapse = ' ') %in% allfusionpairs) {
-#        selection$rank_score[i]=selection$rank_score[i]+2
-#        selection$rank_terms[i]=paste(selection$rank_terms[i],'CGC_fusion')
-#      } else if (any(gene %in% allfusion)) {
-#        selection$rank_score[i]=selection$rank_score[i]+1
-#        selection$rank_terms[i]=paste(selection$rank_terms[i],'partial_CGC_fusion')
-#      } else {
-#        selection$rank_score[i]=selection$rank_score[i]+0
-#        selection$rank_terms[i]=paste(selection$rank_terms[i],'fusion')
-#      }
-#    }
-#    
-#    # -1 for ablation if long del
-#    write("Long DEL ablation",stderr())
-#    ix=intersect(
-#      which(selection$SVTYPE=='DEL' & selection$chr==selection$altchr & abs(selection$altpos-selection$start) > 3e6),
-#      grep('ablation',selection$Annotation)
-#    )
-#    if (length(ix)>0) {
-#      selection$rank_score[ix]=selection$rank_score[ix]-1
-#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'long_del')
-#    }
-#    
-#    # -1 for duplication if long dup
-#    write("Long duplication",stderr())
-#    ix=intersect(
-#      which(selection$SVTYPE=='DUP' & selection$chr==selection$altchr & abs(selection$altpos-selection$start) > 3e6),
-#      grep('duplication',selection$Annotation)
-#    )
-#    if (length(ix)>0) {
-#      selection$rank_score[ix]=selection$rank_score[ix]-1
-#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'long_dup')
-#    }
-#    
-#    # Add Control Freec LOH.
-#    write("LOH by ControlFREEC",stderr())
-#    try( {
-#      if (nrow(selection)>0 & !is.null(freec_loh)) for (i in 1:nrow(selection)) {
-#        ix=freec_loh$chr==selection$chr[i] &
-#          freec_loh$start<selection$start[i] &
-#          freec_loh$end>selection$end[i]
-#        ix=ix[!is.na(ix)]
-#        if (sum(ix) >0) selection$LOH[i]='Y'
-#      }
-#    },silent=T)
-#    
-#    write("Writing results",stderr())
-#    manta_normal_selected <- selection[order(Feature_ID)][order(rank_score,decreasing = T)]
-#    fwrite(manta_normal_selected,file=paste0(sampleData$name,'_manta_normal.csv'))
-#    tableWrapper(manta_normal_selected[,-c('ANN','Gene_ID')][rank_score>1])
-#    write("Ready.",stderr());
-#  } 
-#}
-if (project=='BTB') {
   manta_normal_table=NULL
   # first collect PASS ids from all samples
   allpass=NULL
@@ -1660,7 +1374,6 @@ if (project=='BTB') {
       write("Ready. ",stderr());
     } 
   }
-}
 ```
 
 &nbsp;
@@ -2026,55 +1739,15 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
     # first snvs
     vcf=vcfs[[strelka_snv_file[s]]]
     vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+    if (!'TUMOR' %in% colnames(vcf)) colnames(vcf)=c('NORMAL','TUMOR') # assumption that normal comes first
     # Collect sample-unspecific data for the [PASS in any] IDs into a table
     g=geno(vcf)
     rr=rowRanges(vcf)
     inf=info(vcf)
-    table_snvs=data.table(ID=as.character(names(vcf)),
-                          sample=sample,
-                          chr=as.character(seqnames(rr)),
-                          start=start(rr),
-                          end=end(rr),
-                          ref=as.data.table(rr$REF)$x,
-                          alt=as.data.table(rr$ALT)$value,
-                          AFreq=NA,AD=NA,DP=as.data.table(g$DP)$TUMOR,
-                          AD_normal=NA,DP_normal=as.data.table(g$DP)$NORMAL)
-    # Collect variant allele depths for SNVs:
-    for (this_ref in unique(table_snvs$ref)) for (this_alt in unique(table_snvs[ref==this_ref,alt])) {
-      which_ones=table_snvs$ref==this_ref & table_snvs$alt==this_alt
-      refcounts=as.data.table(data.frame(g[[paste0(this_ref,'U')]]))
-      altcounts=as.data.table(data.frame(g[[paste0(this_alt,'U')]]))
-      table_snvs$AFreq[which_ones]=altcounts[which_ones,TUMOR.1] /
-        (altcounts[which_ones,TUMOR.1]+refcounts[which_ones,TUMOR.1])
-      table_snvs$AD[which_ones]=altcounts[which_ones,TUMOR.1]
-      table_snvs$AD_normal[which_ones]=altcounts[which_ones,NORMAL.1]
-    }
-    table_snvs$reads='≥5'
-    table_snvs$reads[table_snvs$AD<5]='<5'
-    # CAF,SWAF,TOPMED
-    suppressWarnings({
-      t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_snvs$CAF=t
-      t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_snvs$SWAF=t
-      t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_snvs$TOPMED=t
-    } )
-
-    # The snv annotations will be used later:
-    csq=as.data.table(info(vcf))[,CSQ]
-
-    # Same procedure for indels
-    vcf=vcfs[[strelka_indel_file[s]]]
-    vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
-    # Collect sample-unspecific data for the [PASS in any] IDs into a table
-    g=geno(vcf)
-    rr=rowRanges(vcf)
-    inf=info(vcf)
-    table_indels=data.table(ID=as.character(names(vcf)),
+    table_snvs=NULL
+    csq=NULL
+    if (length(vcf)>0) {
+      table_snvs=data.table(ID=as.character(names(vcf)),
                             sample=sample,
                             chr=as.character(seqnames(rr)),
                             start=start(rr),
@@ -2083,28 +1756,77 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
                             alt=as.data.table(rr$ALT)$value,
                             AFreq=NA,AD=NA,DP=as.data.table(g$DP)$TUMOR,
                             AD_normal=NA,DP_normal=as.data.table(g$DP)$NORMAL)
-    refcounts=as.data.table(data.frame(g$TAR))
-    altcounts=as.data.table(data.frame(g$TIR))
-    table_indels$AFreq=altcounts$TUMOR.1 / (altcounts$TUMOR.1 + refcounts$TUMOR.1)
-    table_indels$AD_normal=altcounts$NORMAL.1
-    table_indels$AD=altcounts$TUMOR.1
-    table_indels$reads='≥5'
-    table_indels$reads[table_indels$AD<5]='<5'
-    # CAF,SWAF,TOPMED
-    suppressWarnings({
-      t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_indels$CAF=t
-      t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_indels$SWAF=t
-      t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
-      t[is.infinite(t)]=0
-      table_indels$TOPMED=t
-    })
-
-    # indel annotations added to snv annotations
-    csq=c(csq,as.data.table(info(vcf))[,CSQ])
+      # Collect variant allele depths for SNVs:
+      for (this_ref in unique(table_snvs$ref)) for (this_alt in unique(table_snvs[ref==this_ref,alt])) {
+        which_ones=table_snvs$ref==this_ref & table_snvs$alt==this_alt
+        refcounts=as.data.table(data.frame(g[[paste0(this_ref,'U')]]))
+        altcounts=as.data.table(data.frame(g[[paste0(this_alt,'U')]]))
+        table_snvs$AFreq[which_ones]=round(altcounts[which_ones,TUMOR.1] /
+                                             (altcounts[which_ones,TUMOR.1]+refcounts[which_ones,TUMOR.1]),2)
+        table_snvs$AD[which_ones]=altcounts[which_ones,TUMOR.1]
+        table_snvs$AD_normal[which_ones]=altcounts[which_ones,NORMAL.1]
+      }
+      table_snvs$reads='≥5'
+      table_snvs$reads[table_snvs$AD<5]='<5'
+      # CAF,SWAF,TOPMED
+      if (project=='BTB') suppressWarnings({
+        t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_snvs$CAF=t
+        t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_snvs$SWAF=t
+        t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_snvs$TOPMED=t
+      } )
+      
+      # The snv annotations will be used later:
+      csq=as.data.table(info(vcf))[,CSQ]
+    }
+    
+    # Same procedure for indels
+    vcf=vcfs[[strelka_indel_file[s]]]
+    vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+    if (!'TUMOR' %in% colnames(vcf)) colnames(vcf)=c('NORMAL','TUMOR') # assumption that normal comes first
+    # Collect sample-unspecific data for the [PASS in any] IDs into a table
+    g=geno(vcf)
+    rr=rowRanges(vcf)
+    inf=info(vcf)
+    table_indels=NULL
+    if (length(vcf)>0) {
+      table_indels=data.table(ID=as.character(names(vcf)),
+                              sample=sample,
+                              chr=as.character(seqnames(rr)),
+                              start=start(rr),
+                              end=end(rr),
+                              ref=as.data.table(rr$REF)$x,
+                              alt=as.data.table(rr$ALT)$value,
+                              AFreq=NA,AD=NA,DP=as.data.table(g$DP)$TUMOR,
+                              AD_normal=NA,DP_normal=as.data.table(g$DP)$NORMAL)
+      refcounts=as.data.table(data.frame(g$TAR))
+      altcounts=as.data.table(data.frame(g$TIR))
+      table_indels$AFreq=round(altcounts$TUMOR.1 / (altcounts$TUMOR.1 + refcounts$TUMOR.1),2)
+      table_indels$AD_normal=altcounts$NORMAL.1
+      table_indels$AD=altcounts$TUMOR.1
+      table_indels$reads='≥5'
+      table_indels$reads[table_indels$AD<5]='<5'
+      # CAF,SWAF,TOPMED
+      if (project=='BTB') suppressWarnings({
+        t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_indels$CAF=t
+        t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_indels$SWAF=t
+        t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+        t[is.infinite(t)]=0
+        table_indels$TOPMED=t
+      })
+      
+      # indel annotations added to snv annotations
+      csq=c(csq,as.data.table(info(vcf))[,CSQ])
+    }
 
     # Concatenate the snvs and indels tables for this patient and sample
     table_both=rbind(table_snvs,table_indels)
@@ -2177,7 +1899,7 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
   # strelka_table$Cosmic_count=ranges19$mcols.value[ix]
   # strelka_table$Cosmic_count[is.na(strelka_table$Cosmic_count)]=''
   key=paste0(substr(strelka_table$chr,4,6),':',strelka_table$start,'-',strelka_table$end)
-  key=paste0(strelka_table$chr,':',strelka_table$start,'-',strelka_table$end)
+  if (project!='BTB') key=paste0(strelka_table$chr,':',strelka_table$start,'-',strelka_table$end)
   counts=cbind(cosmic_coding[key,value],cosmic_noncoding[key,value],0)
   max_=apply(counts,1,max,na.rm=T)
   strelka_table$Cosmic_count=max_
@@ -2289,6 +2011,295 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
 }
   
 
+
+#allpass=NULL
+#vcfs=list()
+#if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) for (s in 1:length(strelka_snv_file)) {
+#  write("Read Strelka variations",stderr());
+#  tic("Strelka variations")
+#  # read snvs
+#  vcfs[[strelka_snv_file[s]]]=readVcf(file = strelka_snv_file[s],genome=reference_genome)
+#  pass=rowRanges(vcfs[[strelka_snv_file[s]]])$FILTER=='PASS'
+#  allpass=c(allpass,names(vcfs[[strelka_snv_file[s]]])[pass])
+#  # read indels
+#  vcfs[[strelka_indel_file[s]]]=readVcf(file = strelka_indel_file[s],genome=reference_genome)
+#  pass=rowRanges(vcfs[[strelka_indel_file[s]]])$FILTER=='PASS'
+#  allpass=c(allpass,names(vcfs[[strelka_indel_file[s]]])[pass])
+#  toc <- toc(); write(toc$toc,stderr());
+#}
+#strelka_table=NULL
+#if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
+#  write("Create Strelka table",stderr());
+#  tic("Strelka table")
+#  for (s in 1:length(strelka_snv_file)) {
+#    sample=strsplit(basename(strelka_snv_file[s]),'_somatic')[[1]][1]
+#    # first snvs
+#    vcf=vcfs[[strelka_snv_file[s]]]
+#    vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+#    # Collect sample-unspecific data for the [PASS in any] IDs into a table
+#    g=geno(vcf)
+#    rr=rowRanges(vcf)
+#    inf=info(vcf)
+#    table_snvs=data.table(ID=as.character(names(vcf)),
+#                          sample=sample,
+#                          chr=as.character(seqnames(rr)),
+#                          start=start(rr),
+#                          end=end(rr),
+#                          ref=as.data.table(rr$REF)$x,
+#                          alt=as.data.table(rr$ALT)$value,
+#                          AFreq=NA,AD=NA,DP=as.data.table(g$DP)$TUMOR,
+#                          AD_normal=NA,DP_normal=as.data.table(g$DP)$NORMAL)
+#    # Collect variant allele depths for SNVs:
+#    for (this_ref in unique(table_snvs$ref)) for (this_alt in unique(table_snvs[ref==this_ref,alt])) {
+#      which_ones=table_snvs$ref==this_ref & table_snvs$alt==this_alt
+#      refcounts=as.data.table(data.frame(g[[paste0(this_ref,'U')]]))
+#      altcounts=as.data.table(data.frame(g[[paste0(this_alt,'U')]]))
+#      table_snvs$AFreq[which_ones]=altcounts[which_ones,TUMOR.1] /
+#        (altcounts[which_ones,TUMOR.1]+refcounts[which_ones,TUMOR.1])
+#      table_snvs$AD[which_ones]=altcounts[which_ones,TUMOR.1]
+#      table_snvs$AD_normal[which_ones]=altcounts[which_ones,NORMAL.1]
+#    }
+#    table_snvs$reads='≥5'
+#    table_snvs$reads[table_snvs$AD<5]='<5'
+#    # CAF,SWAF,TOPMED
+#    suppressWarnings({
+#      t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_snvs$CAF=t
+#      t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_snvs$SWAF=t
+#      t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_snvs$TOPMED=t
+#    } )
+#
+#    # The snv annotations will be used later:
+#    csq=as.data.table(info(vcf))[,CSQ]
+#
+#    # Same procedure for indels
+#    vcf=vcfs[[strelka_indel_file[s]]]
+#    vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+#    # Collect sample-unspecific data for the [PASS in any] IDs into a table
+#    g=geno(vcf)
+#    rr=rowRanges(vcf)
+#    inf=info(vcf)
+#    table_indels=data.table(ID=as.character(names(vcf)),
+#                            sample=sample,
+#                            chr=as.character(seqnames(rr)),
+#                            start=start(rr),
+#                            end=end(rr),
+#                            ref=as.data.table(rr$REF)$x,
+#                            alt=as.data.table(rr$ALT)$value,
+#                            AFreq=NA,AD=NA,DP=as.data.table(g$DP)$TUMOR,
+#                            AD_normal=NA,DP_normal=as.data.table(g$DP)$NORMAL)
+#    refcounts=as.data.table(data.frame(g$TAR))
+#    altcounts=as.data.table(data.frame(g$TIR))
+#    table_indels$AFreq=altcounts$TUMOR.1 / (altcounts$TUMOR.1 + refcounts$TUMOR.1)
+#    table_indels$AD_normal=altcounts$NORMAL.1
+#    table_indels$AD=altcounts$TUMOR.1
+#    table_indels$reads='≥5'
+#    table_indels$reads[table_indels$AD<5]='<5'
+#    # CAF,SWAF,TOPMED
+#    suppressWarnings({
+#      t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_indels$CAF=t
+#      t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_indels$SWAF=t
+#      t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+#      t[is.infinite(t)]=0
+#      table_indels$TOPMED=t
+#    })
+#
+#    # indel annotations added to snv annotations
+#    csq=c(csq,as.data.table(info(vcf))[,CSQ])
+#
+#    # Concatenate the snvs and indels tables for this patient and sample
+#    table_both=rbind(table_snvs,table_indels)
+#    table_both$Swegen_count=NA
+#    table_both$Cosmic_count=NA
+#    table_both$rank_score=0
+#    table_both$rank_terms=''
+#    table_both$LOH=''
+#
+#    # Variant type
+#    table_both$type=paste0(table_both$ref,'>',table_both$alt)
+#    table_both$type[nchar(table_both$ref)>nchar(table_both$alt)]='del'
+#    table_both$type[nchar(table_both$ref)<nchar(table_both$alt)]='ins'
+#    table_both$type[nchar(table_both$type)>3]='other'
+#    table_both$type[table_both$type=='T>G']='A>C'
+#    table_both$type[table_both$type=='T>C']='A>G'
+#    table_both$type[table_both$type=='T>A']='A>T'
+#    table_both$type[table_both$type=='G>T']='C>A'
+#    table_both$type[table_both$type=='G>C']='C>G'
+#    table_both$type[table_both$type=='G>A']='C>T'
+#
+#    table_both$CSQ=csq
+#
+#    # get VEP headers from a vcf object (assumed never to differ between snvs and indels)
+#    vep_header=strsplit(info(header(vcf))['CSQ',][,3],'Format: ')[[1]][2]
+#    vep_header=strsplit(vep_header,'\\|')[[1]]
+#
+#    # VEP annotation is put in annotation_table
+#    annotation_table=matrix(data = NA,nrow = length(unlist(csq)),ncol = length(vep_header)+1)
+#    colnames(annotation_table)=c('ID',vep_header)
+#    row=1
+#    for (i in 1:length(csq)) { # for each variant
+#      # for each VEP annotation:
+#      for (j in 1:length(csq[[i]])) {
+#        line=strsplit(csq[[i]][j],'\\|')[[1]]
+#        annotation_table[row,1]=table_both$ID[i]
+#        annotation_table[row,1+(1:length(line))]=line
+#        row=row+1
+#      }
+#    }
+#
+#    # Annotation table then merged with the "table_both"
+#    strelka_table=rbind(strelka_table,merge(table_both,as.data.table(annotation_table),by='ID'))
+#    setkey(strelka_table,'sample')
+#  } # done parsing each sample
+#  toc <- toc(); write(paste(toc$msg,toc$toc),stderr());
+#  rm(vcfs)
+#
+#  # Add Control Freec LOH.  <-- slow.
+#  try( {
+#    if (nrow(strelka_table)>0 & !is.null(freec_loh)) for (i in 1:nrow(strelka_table)) {
+#      ix=freec_loh$chr==strelka_table$chr[i] &
+#        freec_loh$start<strelka_table$start[i] &
+#        freec_loh$end>strelka_table$end[i]
+#      ix=ix[!is.na(ix)]
+#      if (sum(ix) >0) strelka_table$LOH[i]='Y'
+#    }},silent=T)
+#
+#  # Add Swegen counts
+#  by_pos=snptable[strelka_table$ID,value] # if the variant is as 10:10001801_C/T in database
+#  by_name1=snptable[str_extract(strelka_table$Existing_variation,"^rs[0-9]+"),value] # if first rsid
+#  by_name2=snptable[str_extract(strelka_table$Existing_variation,"rs[0-9]+$"),value] # if last rsid (often both)
+#  d=data.table(by_pos,by_name1,by_name2,default=0)
+#  d$max=apply(X = d,MARGIN = 1,FUN = max,na.rm=T)
+#  strelka_table$Swegen_count=d$max
+#
+#  # # Add Cosmic counts
+#  # my_ranges=GRanges(seqnames = strelka_table$chr,
+#  #                   ranges = IRanges(as.numeric(strelka_table$start),as.numeric(strelka_table$end)))
+#  # ix=match(my_ranges,ranges19)
+#  # strelka_table$Cosmic_count=ranges19$mcols.value[ix]
+#  # strelka_table$Cosmic_count[is.na(strelka_table$Cosmic_count)]=''
+#  key=paste0(substr(strelka_table$chr,4,6),':',strelka_table$start,'-',strelka_table$end)
+#  key=paste0(strelka_table$chr,':',strelka_table$start,'-',strelka_table$end)
+#  counts=cbind(cosmic_coding[key,value],cosmic_noncoding[key,value],0)
+#  max_=apply(counts,1,max,na.rm=T)
+#  strelka_table$Cosmic_count=max_
+#
+#  strelka_table$cumstart=strelka_table$start
+#  strelka_table$cumend=strelka_table$end
+#  # # for each chr get cumulative pos
+#  for (i in 1:nrow(chrsz)) {
+#    ix=strelka_table$chr==chrsz$chr[i]
+#    strelka_table$cumstart[ix]=strelka_table$start[ix]+chrsz$starts[i]
+#    strelka_table$cumend[ix]=strelka_table$end[ix]+chrsz$starts[i]
+#  }
+#
+#  selection=strelka_table[,-c('CSQ')] # not needed after parsing/merging the annotations
+#
+#  if (nrow(selection)>0) {
+#
+#    # Cosmic/local Tier2 :
+#    ix=selection$SYMBOL %in% alltier2
+#    selection$rank_score[ix]=2
+#    selection$rank_terms[ix]='T2_gene'
+#    # tier 1 priority:
+#    ix=selection$SYMBOL %in% alltier1
+#    selection$rank_score[ix]=2
+#    selection$rank_terms[ix]='T1_gene'
+#
+#    # Add high impact
+#    ix=selection$IMPACT=='HIGH'
+#    if (any(ix)) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+2
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'high_impact')
+#    }
+#
+#    # Add moderate impact
+#    ix=selection$IMPACT=='MODERATE'
+#    if (any(ix)) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+1
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'moderate_impact')
+#    }
+#
+#    # additional +1 if high impact and TSG
+#    ix=selection$IMPACT=='HIGH' & selection$SYMBOL %in% alltsg
+#    if (any(ix)) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+1
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'high+TSG')
+#    }
+#
+#    # Add clinvar pathogenic
+#    ix=grep('pathogenic',selection$CLIN_SIG)
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+2
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'clinvar')
+#    }
+#
+#    # Add Polyphen/SIFT damaging/deleterious
+#    ix=union(grep('damaging',selection$PolyPhen),grep('deleterious',selection$SIFT))
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+1
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'polyphen/SIFT')
+#    }
+#
+#    # Add hotspots and near hotspots (within 2 residues of a hotspot)
+#    key=paste(selection$SYMBOL,
+#              str_replace(string = selection$Protein_position,
+#                          pattern = '/.*',replacement = ''))    
+#    ix <-
+#      key %in% paste(hotspots_snv[,Hugo_Symbol],hotspots_snv[,Amino_Acid_Position]) |
+#      key %in% paste(hotspots_inframe[,Hugo_Symbol],hotspots_inframe[,Amino_Acid_Position])  ## Warning: Exact match used with inframes
+#    if (any(ix)) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+2
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'hotspot')
+#    }
+#    ix = !ix & key %in% near_hotspots # the near_hotspot excludes those that were a hotspot
+#    if (any(ix)) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+1
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'near_hotspot')
+#    }
+#
+#    # Add cosmic counts
+#    ix=which(selection$Cosmic_count>50)
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+2
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'cosmic_>50')
+#    }
+#    ix=which(selection$Cosmic_count>5 & selection$Cosmic_count<=50)
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+1
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'cosmic_>5')
+#    }
+#
+#    # Add TF binding variants
+#    ix=grep('TF',selection$Consequence)
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]+2
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'TFBS')
+#    }
+#    
+#    ix=which(selection$CANONICAL!='YES')
+#    if (length(ix)>0) {
+#      selection$rank_score[ix]=selection$rank_score[ix]-0
+#      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'not_canonical')
+#    }
+#
+#  }
+#
+#  strelka_selected <- selection[order(cumstart,Allele)][order(rank_score,decreasing = T)]
+#  fwrite(strelka_selected,file=paste0(sampleData$name,'_strelka_tumor.csv'))
+#  tableWrapper(strelka_selected[,-c('cumstart','cumend','DOMAINS')][rank_score>0])
+#}
+#  
+#
 ```
 
 
@@ -2688,19 +2699,21 @@ if (exists('mutect2_selected')) {
 
 &nbsp;
 
-```{r}
-cat('Strelka')
-t=strelka_selected[rank_score>0]
-if (nrow(t)>0){
-  t=data.table(Sample=t$sample,
-               Gene=t$SYMBOL,
-               Mutation=paste(t$Protein_position,t$Amino_acids),
-               'Rank score'=t$rank_score,
-               'Rank Terms'=t$rank_terms,
-               Allele_ratio=t$AFreq)
-  kable(t[Gene!=''], "html") %>%
-  kable_styling(bootstrap_options = "striped",position = "left") %>%
-  scroll_box(width = "900px", height = "300px")
+```{r Strelka selected}
+if(exists('strelka_selected')) {
+	cat('Strelka')
+	t=strelka_selected[rank_score>0]
+	if (nrow(t)>0){
+	  t=data.table(Sample=t$sample,
+		       Gene=t$SYMBOL,
+		       Mutation=paste(t$Protein_position,t$Amino_acids),
+		       'Rank score'=t$rank_score,
+		       'Rank Terms'=t$rank_terms,
+		       Allele_ratio=t$AFreq)
+	  kable(t[Gene!=''], "html") %>%
+	  kable_styling(bootstrap_options = "striped",position = "left") %>%
+	  scroll_box(width = "900px", height = "300px")
+	}
 }
 ```
 
@@ -2843,7 +2856,7 @@ save.image('ws.Rdata')
 <!-- Plot composite data, chromosome wise (updated but does not work yet, the old function below is still used) -->
 ```{r old_plot_function}
 chromplot=function(thischr) if (T) {
-  thischr=paste0('chr',thischr)
+  if (project=='BTB') thischr=paste0('chr',thischr)
   samplenames=sort(unique(ascat_binned$sample))
   nsamples=length(samplenames)
   for (s in 1:nsamples) {

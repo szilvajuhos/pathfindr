@@ -29,7 +29,7 @@ if [ -z ${reference_dir} ] || [ ! -d ${reference_dir} ]; then echo "Incorrect re
 if [ -z ${outputFile} ]; then echo "Missing output file name"; usage; fi
 
 
-#R -e "rmarkdown::render('caw-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
-R -e "rmarkdown::render('Sarek-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
+R -e "rmarkdown::render('../caw-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
+#R -e "rmarkdown::render('Sarek-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
 
 
