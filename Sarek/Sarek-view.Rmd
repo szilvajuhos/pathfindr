@@ -49,6 +49,7 @@ cat('Sample:',basename(getwd()),'\tDirectory:',getwd(),'\nDate:',date())
 
 ## Project and reference genome
 project='BTB'
+write_tables=TRUE
 #project='AML-p'
 #project='CLL'
 
@@ -309,11 +310,11 @@ if (reference_genome=='GRCh38') chrsz <- data.table(
 
 <!-- Reference data files TODO: serialize somehow -->
 ```{r load_reference}
-snp_data = paste(ref_data,'private/swegen_snp_counts.csv',sep="")
+snp_data = paste(ref_data,'swegen_snp_counts.csv',sep="")
 write(paste("Loading SNP data ",snp_data),stderr());
 snptable         = fread( snp_data,key='name')
 
-sv_data = paste(ref_data,'private/swegen_sv_counts.csv',sep="")
+sv_data = paste(ref_data,'swegen_sv_counts.csv',sep="")
 write(paste("Loading structural variants data ",sv_data),stderr());
 swegen_manta_all = fread(sv_data,key='name')
 
@@ -2855,7 +2856,8 @@ save.image('ws.Rdata')
 ## Chromosomes {.tabset}
 <!-- Plot composite data, chromosome wise (updated but does not work yet, the old function below is still used) -->
 ```{r old_plot_function}
-chromplot=function(thischr) if (T) {
+#chromplot=function(thischr) if (T) {
+chromplot=function(thischr) if (F) {
   if (project=='BTB') thischr=paste0('chr',thischr)
   samplenames=sort(unique(ascat_binned$sample))
   nsamples=length(samplenames)

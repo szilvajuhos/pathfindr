@@ -4,7 +4,7 @@
 # run like: 
 # ./runPF.sh -s `pwd`/SAMPLES/PFtest -o bugger.html -r `pwd`/reference_data/ 2>&1 | tee run.log
 
-usage() { echo "Usage: $0 [-r reference_data ] [-s sample_dir] [-o output.html] " 1>&2; exit 1; }
+usage() { echo "Usage: $0 [-r full_path_to_reference_data ] [-s sample_dir] [-o output.html] " 1>&2; exit 1; }
 
 while getopts "s:o:r:" p; do
 	case "${p}" in
@@ -29,7 +29,7 @@ if [ -z ${reference_dir} ] || [ ! -d ${reference_dir} ]; then echo "Incorrect re
 if [ -z ${outputFile} ]; then echo "Missing output file name"; usage; fi
 
 
-R -e "rmarkdown::render('../caw-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
-#R -e "rmarkdown::render('Sarek-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
+#R -e "rmarkdown::render('../caw-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
+R -e "rmarkdown::render('Sarek-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
 
 
