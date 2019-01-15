@@ -551,6 +551,7 @@ cosmic_fusions   = fread(cosmic_fusions_data,key = 'name')
 
 ascat_cnv=NULL
 samplename=NULL
+#### change relation to make it work 
 if (length(ascat_Tratio_file)>0) {
   # extract sample names
   for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
@@ -1721,6 +1722,8 @@ if (exists('mutect2_file')) if (length(mutect2_file)>0) {
 ### Strelka
 <!-- Read annotated small variant data (Strelka, two files) -->
 ```{r load_strelka, echo=FALSE}
+write(paste("Strelka SNV",strelka_snv_file),stderr());
+write(paste("Strelka indel",strelka_indel_file),stderr());
 allpass=NULL
 vcfs=list()
 if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) for (s in 1:length(strelka_snv_file)) {
@@ -1734,14 +1737,18 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) for (s in 1:leng
   allpass=c(allpass,names(vcfs[[strelka_indel_file[s]]])[pass])
 }
 strelka_table=NULL
+write("Creating Strelka table",stderr())
 if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
+  write("processing Strelka SNVs",stderr());
   for (s in 1:length(strelka_snv_file)) {
     sample=strsplit(basename(strelka_snv_file[s]),'_somatic')[[1]][1]
     # first snvs
     vcf=vcfs[[strelka_snv_file[s]]]
     vcf=vcf[names(vcf) %in% allpass] # only those with PASS in either sample
+    write(paste("Changing TUMOR and NORMAL", colnames(vcf)),stderr());
     if (!'TUMOR' %in% colnames(vcf)) colnames(vcf)=c('NORMAL','TUMOR') # assumption that normal comes first
     # Collect sample-unspecific data for the [PASS in any] IDs into a table
+    write(paste("colnames",colnames(vcf)), stderr());
     g=geno(vcf)
     rr=rowRanges(vcf)
     inf=info(vcf)
@@ -1893,6 +1900,17 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
   d$max=apply(X = d,MARGIN = 1,FUN = max,na.rm=T)
   strelka_table$Swegen_count=d$max
 
+  
+  # filtering by SWAF / Swegen_count (same as with Haplotypecaller)
+  if (project=='BTB') {
+    strelka_table=strelka_table[-which(strelka_table$SWAF>=0.01)]
+    strelka_table=strelka_table[-which(strelka_table$Swegen_count>=10)]
+    strelka_table=strelka_table[-which(strelka_table$TOPMED>=0.01)]
+  } else {
+    strelka_table=strelka_table[-which(strelka_table$Swegen_count>=10)]
+  }
+  
+  
   # # Add Cosmic counts
   # my_ranges=GRanges(seqnames = strelka_table$chr,
   #                   ranges = IRanges(as.numeric(strelka_table$start),as.numeric(strelka_table$end)))
@@ -1901,6 +1919,8 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
   # strelka_table$Cosmic_count[is.na(strelka_table$Cosmic_count)]=''
   key=paste0(substr(strelka_table$chr,4,6),':',strelka_table$start,'-',strelka_table$end)
   if (project!='BTB') key=paste0(strelka_table$chr,':',strelka_table$start,'-',strelka_table$end)
+  key=str_replace(key,'X:','23:')
+  key=str_replace(key,'Y:','24:')
   counts=cbind(cosmic_coding[key,value],cosmic_noncoding[key,value],0)
   max_=apply(counts,1,max,na.rm=T)
   strelka_table$Cosmic_count=max_
@@ -1991,11 +2011,27 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
       selection$rank_terms[ix]=paste(selection$rank_terms[ix],'cosmic_>5')
     }
 
-    # Add TF binding variants
+    # Special case for TERT promoter
+    ix=which(selection$SYMBOL=='TERT' & selection$Consequence=='5_prime_UTR_variant')
+    if (length(ix)>0) {
+      selection$rank_score[ix]=selection$rank_score[ix]+2
+      selection$rank_terms[ix]=paste(selection$rank_terms[ix],'TERT_5\'UTR')
+    }
+
+    # Add TF binding variants near (100kb) cancer genes
     ix=grep('TF',selection$Consequence)
     if (length(ix)>0) {
       selection$rank_score[ix]=selection$rank_score[ix]+2
       selection$rank_terms[ix]=paste(selection$rank_terms[ix],'TFBS')
+      for (i in 1:length(ix)) {
+        near=which(selection$cumend[ix[i]] > (tumorgenes$cumstart-100e3) & selection$cumstart[ix[i]] < (tumorgenes$cumend + 100e3) &
+                     !selection$SYMBOL[ix[i]] %in% alltumorgenes)
+        if (length(near)>0) {
+          genes=paste(tumorgenes$`Gene Symbol`[near],collapse = ',')
+          selection$rank_score[ix[i]]=selection$rank_score[ix[i]]+2
+          selection$rank_terms[ix[i]]=paste(selection$rank_terms[ix[i]],paste0('near_',genes))
+        }
+      }
     }
     
     ix=which(selection$CANONICAL!='YES')
@@ -2006,6 +2042,10 @@ if (length(strelka_snv_file)>0  & length(strelka_indel_file)>0) {
 
   }
 
+  firstcols=c('ID','sample','SYMBOL','rank_score','rank_terms','LOH','AFreq','Consequence','IMPACT','SWAF','TOPMED','Swegen_count')
+  cols=colnames(selection)
+  setcolorder(x = selection,neworder = c(firstcols,cols[!cols %in% firstcols]))
+  
   strelka_selected <- selection[order(cumstart,Allele)][order(rank_score,decreasing = T)]
   fwrite(strelka_selected,file=paste0(sampleData$name,'_strelka_tumor.csv'))
   tableWrapper(strelka_selected[,-c('cumstart','cumend','DOMAINS')][rank_score>0])
@@ -2333,13 +2373,16 @@ if (exists('mutect2_table')) for (sample in sort(unique(mutect2_table$sample))) 
 
   # Mutect2 plot
   cat('Mutect2: ',sample)
-  temp=unique(mutect2_table[sample][,.(cumstart,reads,AFreq,type,SYMBOL,Protein_position,Amino_acids)])
+  temp=unique(mutect2_table[sample][,.(cumstart,reads,AFreq,type,SYMBOL,Protein_position,Amino_acids,IMPACT)])
   g_mutect2=g_basic+
     xlab(paste('Mutect2: ',sample))+
     geom_point(data = temp,mapping = aes(x=cumstart,y=AFreq,fill=type,shape=type,col=reads),alpha=1)+
-    geom_label_repel(data = temp[SYMBOL %in% alltumorgenes & Amino_acids!='',],
+    geom_label_repel(data = temp[SYMBOL %in% alltier1 & IMPACT %in% c('MODERATE','HIGH'),],
                      mapping = aes(x=cumstart,y=AFreq,label=paste(SYMBOL,Protein_position,Amino_acids)),
-                     inherit.aes = F,size=3,nudge_y = 0.2)
+                     inherit.aes = F,size=3,nudge_y = 0.2,col='black')+
+    geom_label_repel(data = temp[SYMBOL %in% alltier2 & IMPACT %in% c('MODERATE','HIGH'),],
+                     mapping = aes(x=cumstart,y=AFreq,label=paste(SYMBOL,Protein_position,Amino_acids)),
+                     inherit.aes = F,size=3,nudge_y = 0.2,col='grey')
   print(g_mutect2)
 
 }
@@ -2373,13 +2416,16 @@ if (exists('strelka_table')) for (sample in sort(unique(strelka_table$sample))) 
 
   # Strelka plot
   cat('Strelka: ',sample)
-  temp=unique(strelka_table[sample][,.(cumstart,reads,AFreq,type,SYMBOL,Protein_position,Amino_acids)])
+  temp=unique(strelka_table[sample][,.(cumstart,reads,AFreq,type,SYMBOL,Protein_position,Amino_acids,IMPACT)])
   g_strelka=g_basic+
     xlab(paste('Strelka: ',sample))+
     geom_point(data = temp,mapping = aes(x=cumstart,y=AFreq,fill=type,shape=type,col=reads),alpha=1)+
-    geom_label_repel(data = temp[SYMBOL %in% alltumorgenes & Amino_acids!='',],
+    geom_label_repel(data = temp[SYMBOL %in% alltier1 & IMPACT %in% c('MODERATE','HIGH'),],
                      mapping = aes(x=cumstart,y=AFreq,label=paste(SYMBOL,Protein_position,Amino_acids)),
-                     inherit.aes = F,size=3,nudge_y = 0.2)
+                     inherit.aes = F,size=3,nudge_y = 0.2,col='black')+
+    geom_label_repel(data = temp[SYMBOL %in% alltier2 & IMPACT %in% c('MODERATE','HIGH'),],
+                     mapping = aes(x=cumstart,y=AFreq,label=paste(SYMBOL,Protein_position,Amino_acids)),
+                     inherit.aes = F,size=3,nudge_y = 0.2,col='grey')
   print(g_strelka)
 }
 ```

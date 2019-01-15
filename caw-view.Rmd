@@ -343,8 +343,8 @@ if (reference_genome=='GRCh38') chrsz <- data.table(
 
 <!-- Reference data files -->
 ```{r load_reference}
-snptable=fread('~/reports/reference_data/private/swegen_snp_counts.csv',key='name')
-swegen_manta_all=fread('~/reports/reference_data/private/swegen_sv_counts.csv',key='name')
+snptable=fread('~/reports/reference_data/swegen_snp_counts.csv',key='name')
+swegen_manta_all=fread('~/reports/reference_data/swegen_sv_counts.csv',key='name')
 #allgenes=fread('~/reports/reference_data/genes_ensemble_canonical.csv',key='name')
 tumorgenes=fread('~/reports/reference_data/cancer_gene_census.csv',key='Gene Symbol')
 tumorgenes$chr=paste0('chr',str_replace(string=tumorgenes$`Genome Location`,pattern = ':.*',replacement = ''))
