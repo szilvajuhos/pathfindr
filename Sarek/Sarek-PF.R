@@ -719,84 +719,283 @@ loadManta <- function(manta_tumor_file,manta_normal_file) {
 }
 
 loadMutect2 <- function(mutect2_file) {
-library(VariantAnnotation)
-	# first collect PASS ids from all samples
-	allpass=NULL
-	if (exists('mutect2_file')) if (length(mutect2_file)>0) {
-  	for (s in 1:length(mutect2_file)) {
-    	vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
-    	pass=rowRanges(vcf)$FILTER=='PASS'
-    	allpass=c(allpass,names(vcf)[pass])
-  	}
-	}  
-	# then collect variants...
-  mutect2_table=NULL
-  for (s in 1:length(mutect2_file)) {
-    sample=strsplit(basename(mutect2_file[s]),'[.]')[[1]][1]
+  library(VariantAnnotation)
 
-    vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
-    vcf=vcf[names(vcf) %in% allpass]
-	}
-	if (length(vcf)>0) {
-	  rr=rowRanges(vcf)
-	  g=geno(vcf)
-	  inf=info(vcf)
-	
-	  # manipulate into a data frame with relevant data
-	  mutations=as.data.table(ranges(rr))
-	  mutations$chr <- as.character(seqnames(rr))
-	  mutations$sample=sample
-	  mutations=mutations[,.(ID=names,sample,chr,start,end,width)]
-	
-	  mutations$ref=as.character(ref(vcf))
-	  mutations$alt=as.data.table(alt(vcf))[, .(values = list(value)), by = group][,values]
-	  mutations$type=paste0(mutations$ref,'>',mutations$alt)
-	  mutations$type[nchar(mutations$ref)>nchar(mutations$alt)]='del'
-	  mutations$type[nchar(mutations$ref)<nchar(mutations$alt)]='ins'
-	  mutations$type[nchar(mutations$type)>3]='other'
-	  mutations$type[mutations$type=='T>G']='A>C'
-	  mutations$type[mutations$type=='T>C']='A>G'
-	  mutations$type[mutations$type=='T>A']='A>T'
-	  mutations$type[mutations$type=='G>T']='C>A'
-	  mutations$type[mutations$type=='G>C']='C>G'
-	  mutations$type[mutations$type=='G>A']='C>T'
-	
-	  # Headers are sometimes sample names instead of TUMOR-NORMAL
-	  headers=colnames(g$AD)
-	  if (!'TUMOR' %in% headers) {
-	    ix=grep('-02$',headers)
-	    if (length(ix)==0) ix=grep('[TR]',headers)
-	    headers[ix]='TUMOR'
-	    headers[-ix]='NORMAL'
-	    colnames(g$AD)=headers
-	    colnames(g$AF)=headers # <-- assumes the same header order in AF
-	  }
-	  mutations$AFreq=round(sapply(g$AF[,'TUMOR'], "[", 1),2)
-	  ad=as.data.table(g$AD)
-	  colnames(ad)=paste0('AD_',colnames(ad))
-	  mutations=cbind(mutations,ad)
-	  # mutations$DP=sapply(g$AD[,'TUMOR'], sum)
-	  # mutations$AD=sapply(g$AD[,'TUMOR'], "[[", 2)
-	  # mutations$DPn=sapply(g$AD[,'NORMAL'], sum)
-	  # mutations$ADn=sapply(g$AD[,'NORMAL'], "[[", 2)
-	  mutations$reads=''
-	  temp=sapply(g$AD[,'TUMOR'], "[[", 2)
-	  mutations$reads[temp<5]='<5'
-	  mutations$reads[temp>=5]='≥5'
-	
-	  # add counts from the new sources
-	  suppressWarnings( {
-	    t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
-	    t[is.infinite(t)]=0
-	    mutations$CAF=t
-	    t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
-	    t[is.infinite(t)]=0
-	    mutations$SWAF=t
-	    t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
-	    t[is.infinite(t)]=0
-	    mutations$TOPMED=t
-	  } )
-	}
+  # first collect PASS ids from all samples
+  allpass=NULL
+  if (exists('mutect2_file')) if (length(mutect2_file)>0) {
+    for (s in 1:length(mutect2_file)) {
+      vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
+      pass=rowRanges(vcf)$FILTER=='PASS'
+      allpass=c(allpass,names(vcf)[pass])
+    }
+    # then collect variants...
+    mutect2_table=NULL
+    for (s in 1:length(mutect2_file)) {
+      sample=strsplit(basename(mutect2_file[s]),'[.]')[[1]][1]
+      vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
+      vcf=vcf[names(vcf) %in% allpass]
+
+      if (length(vcf)>0) {
+        rr=rowRanges(vcf)
+        g=geno(vcf)
+        inf=info(vcf)	
+        # manipulate into a data frame with relevant data
+        mutations=as.data.table(ranges(rr))
+        mutations$chr <- as.character(seqnames(rr))
+        mutations$sample=sample
+        mutations=mutations[,.(ID=names,sample,chr,start,end,width)]
+    
+        mutations$ref=as.character(ref(vcf))
+        mutations$alt=as.data.table(alt(vcf))[, .(values = list(value)), by = group][,values]
+        mutations$type=paste0(mutations$ref,'>',mutations$alt)
+        mutations$type[nchar(mutations$ref)>nchar(mutations$alt)]='del'
+        mutations$type[nchar(mutations$ref)<nchar(mutations$alt)]='ins'
+        mutations$type[nchar(mutations$type)>3]='other'
+        mutations$type[mutations$type=='T>G']='A>C'
+        mutations$type[mutations$type=='T>C']='A>G'
+        mutations$type[mutations$type=='T>A']='A>T'
+        mutations$type[mutations$type=='G>T']='C>A'
+        mutations$type[mutations$type=='G>C']='C>G'
+        mutations$type[mutations$type=='G>A']='C>T'
+  
+        # Headers are sometimes sample names instead of TUMOR-NORMAL
+        headers=colnames(g$AD)
+        if (!'TUMOR' %in% headers) {
+          ix=grep('-02$',headers)
+          if (length(ix)==0) 
+            ix=grep('[TR]',headers)
+          headers[ix]='TUMOR'
+          headers[-ix]='NORMAL'
+          colnames(g$AD)=headers
+          colnames(g$AF)=headers # <-- assumes the same header order in AF
+        }
+        mutations$AFreq=round(sapply(g$AF[,'TUMOR'], "[", 1),2)
+        ad=as.data.table(g$AD)
+        colnames(ad)=paste0('AD_',colnames(ad))
+        mutations=cbind(mutations,ad)
+        # mutations$DP=sapply(g$AD[,'TUMOR'], sum)
+        # mutations$AD=sapply(g$AD[,'TUMOR'], "[[", 2)
+        # mutations$DPn=sapply(g$AD[,'NORMAL'], sum)
+        # mutations$ADn=sapply(g$AD[,'NORMAL'], "[[", 2)
+        mutations$reads=''
+        temp=sapply(g$AD[,'TUMOR'], "[[", 2)
+        mutations$reads[temp<5]='<5'
+        mutations$reads[temp>=5]='≥5'
+    
+        # add counts from the new sources
+        suppressWarnings( {
+          t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+          t[is.infinite(t)]=0
+          mutations$CAF=t
+          t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+          t[is.infinite(t)]=0
+          mutations$SWAF=t
+          t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+          t[is.infinite(t)]=0
+          mutations$TOPMED=t
+        } )
+        # Add Swegen counts
+        mutations$Swegen_count=snptable[names(vcf),value]
+        mutations$Swegen_count[is.na(mutations$Swegen_count)]=0
+        # Some have multiple rsIDs (diminishingly few)
+        # Also double check Swegen in case pos in reference but rsID or not properly matched in data
+        pos=paste0(mutations$chr,':',mutations$start,'_',mutations$ref,'/',mutations$alt)
+        snps=snptable[c(pos)][!is.na(value)] # extract from reference[those present]
+        if (nrow(snps)>0) 
+          mutations$Swegen_count[match(snps$name,pos)]=snps$value # put
+      
+        ## Annotate by cosmic (for possibly retaining non PASS hotspots, which is not necessary smart)
+        key=paste0(substr(mutations$chr,4,6),':',mutations$start,'-',mutations$end)
+        key=str_replace(key,'X:','23:')
+        key=str_replace(key,'Y:','24:')
+      
+        counts=cbind(cosmic_coding[key,value],cosmic_noncoding[key,value],0)
+        max_=apply(counts,1,max,na.rm=T)
+        mutations$Cosmic_count=max_
+
+        # Add Control Freec LOH.
+        mutations$rank_score=0
+        mutations$rank_terms=''
+        mutations$LOH=''
+        try( {
+          if (nrow(mutations)>0 & !is.null(freec_loh)) 
+            for (i in 1:nrow(mutations)) {
+              ix = freec_loh$chr==mutations$chr[i] &
+                   freec_loh$start<mutations$start[i] &
+                   freec_loh$end>mutations$end[i]
+              ix = ix[!is.na(ix)]
+              if (sum(ix) >0) 
+                mutations$LOH[i]='Y'
+          }
+        },silent=T)
+   
+        # "info"" annotations also need to be added
+        mutations=cbind(mutations,as.data.table(info(vcf))[,.(CSQ)])
+
+        # keep only PASS
+        # mutations=mutations[filter=='PASS',]
+
+        # get snpEff headers
+        # snpeff_header=strsplit(info(header(vcf))['ANN',][,3],'ions: \'')[[1]][2]
+        # snpeff_header=strsplit(snpeff_header,' \\| ')[[1]]
+        ## get VEP headers
+        vep_header=strsplit(info(header(vcf))['CSQ',][,3],'Format: ')[[1]][2]
+        vep_header=strsplit(vep_header,'\\|')[[1]]
+
+        # VEP annotation is put in annotation_table
+        annotation_table=matrix(data = NA,nrow = length(unlist(mutations$CSQ)),ncol = length(vep_header)+1)
+        colnames(annotation_table)=c('ID',vep_header)
+        row=1
+        for (i in 1:nrow(mutations)) { # for each variant
+          # for each VEP annotation:
+          for (j in 1:length(mutations$CSQ[[i]])) {
+            line=strsplit(mutations$CSQ[[i]][j],'\\|')[[1]]
+            annotation_table[row,1]=mutations$ID[i]
+            annotation_table[row,1+(1:length(line))]=line
+            row=row+1
+          }
+        }
+        annotation_table=as.data.table(annotation_table)
+        # Annotation table then concatenated
+        mutect2_table=rbind(mutect2_table,merge(mutations,annotation_table,by='ID'))
+      }
+    } # done collecting from vcf files
+
+    # filtering by SWAF / Swegen_count (same as with Haplotypecaller)
+    mutect2_table=mutect2_table[-which(mutect2_table$SWAF>=0.01)]
+    mutect2_table=mutect2_table[-which(mutect2_table$Swegen_count>=10)]
+    mutect2_table=mutect2_table[-which(mutect2_table$TOPMED>=0.01)]
+  
+    mutect2_table$cumstart=NA
+    mutect2_table$cumend=NA
+    # # for each chr get cumulative pos
+    for (i in 1:nrow(chrsz)) {
+      ix=mutect2_table$chr==chrsz$chr[i]
+      mutect2_table$cumstart[ix]=mutect2_table$start[ix]+chrsz$starts[i]
+      mutect2_table$cumend[ix]=mutect2_table$end[ix]+chrsz$starts[i]
+    }
+    setkey(mutect2_table,'sample')
+    selection=mutect2_table[,-c('CSQ')] # not needed after parsing/merging the annotations
+    if (nrow(selection)>0) {
+      # Cosmic/local Tier2 :
+      ix=selection$SYMBOL %in% alltier2
+      selection$rank_score[ix]=2
+      selection$rank_terms[ix]='T2_gene'
+      # tier 1 priority:
+      ix=selection$SYMBOL %in% alltier1
+      selection$rank_score[ix]=2
+      selection$rank_terms[ix]='T1_gene'
+
+      # Add high impact
+      ix=selection$IMPACT=='HIGH'
+      if (any(ix)) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'high_impact')
+      }
+
+      # Add moderate impact
+      ix=selection$IMPACT=='MODERATE'
+      if (any(ix)) {
+        selection$rank_score[ix]=selection$rank_score[ix]+1
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'moderate_impact')
+      }
+
+      # additional +1 if high impact and TSG
+      ix=selection$IMPACT=='HIGH' & selection$SYMBOL %in% alltsg
+      if (any(ix)) {
+        selection$rank_score[ix]=selection$rank_score[ix]+1
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'high+TSG')
+      }
+
+      # Add clinvar pathogenic
+      ix=grep('pathogenic',selection$CLIN_SIG)
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'clinvar')
+      }
+
+      # Add Polyphen/SIFT damaging/deleterious
+      ix=union(grep('damaging',selection$PolyPhen),grep('deleterious',selection$SIFT))
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+1
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'polyphen/SIFT')
+      }
+
+      # Add hotspots and near hotspots (within 2 residues of a hotspot)
+      key=paste(selection$SYMBOL,
+              str_replace(string = selection$Protein_position,
+              pattern = '/.*',replacement = ''))
+      ix <-
+        key %in% paste(hotspots_snv[,Hugo_Symbol],hotspots_snv[,Amino_Acid_Position]) |
+        key %in% paste(hotspots_inframe[,Hugo_Symbol],hotspots_inframe[,Amino_Acid_Position])  ## Warning: Exact match used with inframes
+      if (any(ix)) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'hotspot')
+      }
+      ix = !ix & key %in% near_hotspots # the near_hotspot excludes those that were a hotspot
+      if (any(ix)) {
+        selection$rank_score[ix]=selection$rank_score[ix]+1
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'near_hotspot')
+      }
+    
+      # Add cosmic counts
+      ix=which(selection$Cosmic_count>50)
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'cosmic_>50')
+      }
+      ix=which(selection$Cosmic_count>5 & selection$Cosmic_count<=50)
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+1
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'cosmic_>5')
+      }
+      
+      # Special case for TERT promoter
+      ix=which(selection$SYMBOL=='TERT' & selection$Consequence=='5_prime_UTR_variant')
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'TERT_5\'UTR')
+      }
+
+      # Add TF binding variants near (100kb) cancer genes
+      ix=grep('TF',selection$Consequence)
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]+2
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'TFBS')
+        for (i in 1:length(ix)) {
+          near = which(selection$cumend[ix[i]] > (tumorgenes$cumstart-100e3) & 
+                 selection$cumstart[ix[i]] < (tumorgenes$cumend + 100e3) &
+                 !selection$SYMBOL[ix[i]] %in% alltumorgenes)
+          if (length(near)>0) {
+            genes=paste(tumorgenes$`Gene Symbol`[near],collapse = ',')
+            selection$rank_score[ix[i]]=selection$rank_score[ix[i]]+2
+            selection$rank_terms[ix[i]]=paste(selection$rank_terms[ix[i]],paste0('near_',genes))
+          }
+        }
+      }
+
+      ix=which(selection$CANONICAL!='YES')
+      if (length(ix)>0) {
+        selection$rank_score[ix]=selection$rank_score[ix]-0
+        selection$rank_terms[ix]=paste(selection$rank_terms[ix],'not_canonical')
+      }
+    }
+
+    firstcols=c('ID','sample','SYMBOL','rank_score','rank_terms','LOH','AFreq','Consequence','IMPACT','SWAF','TOPMED','Swegen_count')
+    cols=colnames(selection)
+    setcolorder(x = selection,neworder = c(firstcols,cols[!cols %in% firstcols]))
+    selection <- selection[order(cumstart,Allele)][order(rank_score,decreasing = T)]
+  
+    # # Take some information to the VCF
+    # selected_for_vcf=selection[, .(LOH=LOH,Swegen_count=Swegen_count,rank_terms=paste0(rank_score,':',SYMBOL,' ',trimws(rank_terms)),rank_score=rank_score), by = ID]
+    # selected_for_vcf=selected_for_vcf[, .(LOH=LOH,Swegen_count=Swegen_count,rank_terms=paste(unique(rank_terms),collapse=','),rank_score=paste(unique(rank_score),collapse=',')), by=ID]
+    # selected_for_vcf$rank_terms[selected_for_vcf$rank_score=='0']=''
+  
+    mutect2_selected <- selection
+    if (write_tables) 
+      fwrite(mutect2_selected,file=paste0(sampleData$name,'_mutect2_tumor.csv'))
+  }
 }
 
 write("##################################################################################################################",stdout())
@@ -856,6 +1055,32 @@ write("\n\n",stdout())
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
 write("x                                             Mutect2 with GATK 3.8                                             x",stderr());
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+write("Reading MuTect2 file ...",stdout())
 mutect2_file <- grep(pattern = ".*mutect2_.*AF.*vep.ann.vcf$",files,value = T)
+
+write("Reading SweGen SNP counts ...",stdout())
+snptable         = fread(paste0(ref_data,'swegen_snp_counts.csv'),key='name')
+write("Reading COSMIC tables ...",stdout())
+cosmic_coding    = fread(paste0(ref_data,'cosmic_coding_table.csv'),key = 'name')
+cosmic_noncoding = fread(paste0(ref_data,'cosmic_noncoding_table.csv'),key = 'name')
+cosmic_fusions   = fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
+alltsg = tumorgenes[grep('TSG',`Role in Cancer`),`Gene Symbol`]
+hotspots_snv = unique( fread(paste0(ref_data,'hotspots_v2_snv.csv'))[,.(Hugo_Symbol,Amino_Acid_Position)])[-grep('splice',Amino_Acid_Position)]
+hotspots_snv$pos <- as.numeric(hotspots_snv$Amino_Acid_Position)
+hotspots_inframe = unique(fread(paste0(ref_data,'hotspots_v2_inframe.csv'))[,.(Hugo_Symbol,Amino_Acid_Position)])
+hotspots_inframe$start=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '-[0-9]*',replacement = ''))
+hotspots_inframe$end=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '[0-9]*-',replacement = ''))
+near_hotspots=NULL
+for (i in 1:nrow(hotspots_inframe)) 
+  near_hotspots = c(near_hotspots,
+                    paste(hotspots_inframe$Hugo_Symbol[i],
+                    c(seq(hotspots_inframe$start[i]-2,hotspots_inframe$start[i]+2),
+                    hotspots_inframe$end[i]-2,hotspots_inframe$end[i]+2))
+                  )
+for (i in 1:nrow(hotspots_snv))
+  near_hotspots = c(near_hotspots,
+                    paste(hotspots_snv$Hugo_Symbol[i],
+                    seq(hotspots_snv$pos[i]-2,hotspots_snv$pos[i]+2))
+                  )
 
 loadMutect2(mutect2_file)
