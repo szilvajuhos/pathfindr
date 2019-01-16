@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 # call like:
 # Rscript ~/dev/pathfindr/Sarek/Sarek-PF.R -r ~/dev/pathfindr/Sarek/reference_data/ -o bugger -s /data0/btb/P2233/test/
-
 library("optparse")
 
 # Command-line arguments to read
@@ -107,8 +106,6 @@ if (reference_genome=='GRCh38') chrsz <- data.table(
              46656721, 50727961, 155682361, 56827081)
 ) 
 
-
-
 ##################################### Tumor Genes - General Ones #####################################
 library(stringr)
 tumorgenes_data = paste(ref_data,'cancer_gene_census.csv',sep='')
@@ -138,20 +135,6 @@ alltier1=union(tumorgenes[Tier==1,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 
 alltier2=union(tumorgenes[Tier==2,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==2,Gene])
 
 ##################################### ControlFREEC #####################################
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-write("x                                             ControlFREEC                                                      x",stderr());
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-# read control freec result files
-freec_Tratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_ratio.txt',files,perl = T)]
-freec_Nratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_normal_ratio.txt',files,perl = T)][1]
-freec_Tbaf_file <- files[grep(pattern = '[TR].hg38.pileup.gz_BAF.txt',files,perl = T)]
-freec_Nbaf_file <- files[grep(pattern = '[BN].hg38.pileup.gz_BAF.txt',files,perl = T)][1]
-freec_info_file <- files[grep(pattern = 'hg38.pileup.gz_info.txt',files,perl = T)]
-freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",files,perl = T)]
-
-write("ControlFREEC files:",stdout())
-printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
-
 loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) {
   cnvs=NULL
   freec_cnv=NULL
@@ -308,92 +291,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
 	print(typeof(tratio))
 	c(tratio,nratio)
 }
-# uncomment to enable ControlFREEC
-#ratioList <- loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
-#CFTratio <- ratioList[1]
-#CFNratio <- ratioList[2]
 
-
-############################### Plot Control Freec tumor copy number log ratio, tBAF and nBAF ###################################
-#{r plot_control_freec,fig.width=15,fig.height=7}
-
-plotControlFREEC <- function(tratio,nratio) {
-	print(typeof(tratio))
-	library(ggplot2)
-	if (exists('tratio')) for (sample in unique(tratio$sample)) {
-		cat('Control Freec: ',sample)
-   	par(mai=c(0,4,0,2))
-   	temp <- tratio[sample]
-   	temp$Ratio[temp$Ratio>3]=3
- 
-   	g=ggplot()+ylab('B allele ratio and Coverage Ratio')+xlab(sample)+
-     	scale_color_gradientn(colours = c('violet','blue','black','red','orange'))+
-     	expand_limits(x=c(0,3200e6))+
-     	scale_y_continuous(limits=c(-1,3),
-                        breaks = 0:2,
-                        minor_breaks = seq(0,2.5,0.5),
-                        labels = 0:2
-     )
-   	# normal logR below
-   	g=g+geom_point(aes(x=cumstart,y=Ratio-0.3),col='darkgrey',data=nratio,alpha=1/5,shape='.')
-   	# tumor logR
-   	g=g+geom_point(aes(x=cumstart,y=Ratio,col=CopyNumber),data=temp,alpha=1/5,shape='.')
-   	# add smoothed
-   	#g=g+geom_line(aes(x=cumpos,y=tratio),stat="identity",colour="green",size=0.05,data=binned[sample])
- 
-   	g=g+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-             axis.title.x=element_blank(),
-             axis.text.x=element_blank(),
-             axis.ticks.x=element_blank())
-   	# add tBAF  <--- downsampled by 10
-   	g=g+geom_point(data = tbaf[seq(1,nrow(tbaf),10)][sample],aes(x=cumstart,y=-0.5+0.5*BAF),
-                  alpha=1/10,shape='.')
-   	# add nBAF  <--- downsampled by 10
-   	g=g+geom_point(data = nbaf[seq(1,nrow(nbaf),10)],aes(x=cumstart,y=-1+0.5*BAF),
-                  alpha=1/10,shape='.')
-   	# add chromosome lines
-   	g=g+geom_segment(mapping = aes(x = starts,xend=starts,y= -1,yend=3),data=chrsz,inherit.aes = F,alpha=1/5)
-   	# add chromosome labels
-   	g=g+geom_text(aes(x=starts+0.5*length,y=0.1,label=label),data = chrsz,inherit.aes = F)
- 	
-		printList(g)
-   	print(g)
-	}
-}
-
-# TODO: fixit
-#plotControlFREEC(CFTratio,CFNratio)
-
-
-#### Scatter plot
-#```{r scatter_plot_control_freec, echo=FALSE,fig.width=15,fig.height=8,warning=F}
-#if (exists('binned')) for (sample in unique(binned$sample)) {
-#   cat('Control Freec: ',sample)
-#   binned$tmaf[binned$tmaf<0]=1
-#   g=ggplot()+expand_limits(y=c(.5,1))+expand_limits(x=c(.3,3))+
-#     geom_point(aes(x = tratio,y = tmaf,col=chr),data=binned[sample][tratio<1.8])+
-#     xlab('Tumor (1Mb mean) DNA ratio')+ylab('Tumor (1Mb mean) major allele ratio')+
-#     scale_y_continuous(breaks = seq(0.5,1,0.1)) +
-#     scale_x_continuous(breaks = seq(0.5,2.5,0.1))+
-#     theme(panel.grid.minor.x = element_blank(),
-#           panel.grid.major.x = element_line(colour="grey", size=0.2),
-#           panel.grid.major.y = element_line(colour="grey", size=0.2),
-#           panel.grid.minor.y = element_blank()
-#     )
-#   print(g)
-#}
-#```
-
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-write("x                                             ASCAT                                                             x",stderr());
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.LogR$",files)]
-ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.LogR$",files)][1]
-ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.BAF$",files)]
-ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.BAF$",files)][1]
-ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)]
-write("ASCAT files:",stdout())
-printList( list(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file) )
 
 loadASCAT <-function(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file) {
 	ascat_cnv=NULL
@@ -557,23 +455,8 @@ loadASCAT <-function(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_N
 		#tableWrapper(ascat_cnv)
 	}
 }
-#loadASCAT(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file)
 
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-write("x                                             Manta                                                             x",stderr());
-write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)
-manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)[1]
-cosmic_fusions=fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
 
-# TODO: sort it out to be local or a general on-demand object
-allfusionpairs=NULL
-allfusion=tumorgenes[grep('fusion',`Role in Cancer`),`Gene Symbol`]
-for (i in 1:length(allfusion)) {
-  t=trimws(strsplit(tumorgenes[allfusion[i],`Translocation Partner`],', ')[[1]])
-  if (length(t)>0) for (j in 1:length(t))
-  allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
-}
 
 loadManta <- function(manta_tumor_file,manta_normal_file) {
 	library(VariantAnnotation)
@@ -835,5 +718,144 @@ loadManta <- function(manta_tumor_file,manta_normal_file) {
 	}
 }
 
-loadManta(manta_tumor_file,manta_normal_file)
+loadMutect2 <- function(mutect2_file) {
+library(VariantAnnotation)
+	# first collect PASS ids from all samples
+	allpass=NULL
+	if (exists('mutect2_file')) if (length(mutect2_file)>0) {
+  	for (s in 1:length(mutect2_file)) {
+    	vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
+    	pass=rowRanges(vcf)$FILTER=='PASS'
+    	allpass=c(allpass,names(vcf)[pass])
+  	}
+	}  
+	# then collect variants...
+  mutect2_table=NULL
+  for (s in 1:length(mutect2_file)) {
+    sample=strsplit(basename(mutect2_file[s]),'[.]')[[1]][1]
 
+    vcf=readVcf(file = mutect2_file[s],genome = reference_genome)
+    vcf=vcf[names(vcf) %in% allpass]
+	}
+	if (length(vcf)>0) {
+	  rr=rowRanges(vcf)
+	  g=geno(vcf)
+	  inf=info(vcf)
+	
+	  # manipulate into a data frame with relevant data
+	  mutations=as.data.table(ranges(rr))
+	  mutations$chr <- as.character(seqnames(rr))
+	  mutations$sample=sample
+	  mutations=mutations[,.(ID=names,sample,chr,start,end,width)]
+	
+	  mutations$ref=as.character(ref(vcf))
+	  mutations$alt=as.data.table(alt(vcf))[, .(values = list(value)), by = group][,values]
+	  mutations$type=paste0(mutations$ref,'>',mutations$alt)
+	  mutations$type[nchar(mutations$ref)>nchar(mutations$alt)]='del'
+	  mutations$type[nchar(mutations$ref)<nchar(mutations$alt)]='ins'
+	  mutations$type[nchar(mutations$type)>3]='other'
+	  mutations$type[mutations$type=='T>G']='A>C'
+	  mutations$type[mutations$type=='T>C']='A>G'
+	  mutations$type[mutations$type=='T>A']='A>T'
+	  mutations$type[mutations$type=='G>T']='C>A'
+	  mutations$type[mutations$type=='G>C']='C>G'
+	  mutations$type[mutations$type=='G>A']='C>T'
+	
+	  # Headers are sometimes sample names instead of TUMOR-NORMAL
+	  headers=colnames(g$AD)
+	  if (!'TUMOR' %in% headers) {
+	    ix=grep('-02$',headers)
+	    if (length(ix)==0) ix=grep('[TR]',headers)
+	    headers[ix]='TUMOR'
+	    headers[-ix]='NORMAL'
+	    colnames(g$AD)=headers
+	    colnames(g$AF)=headers # <-- assumes the same header order in AF
+	  }
+	  mutations$AFreq=round(sapply(g$AF[,'TUMOR'], "[", 1),2)
+	  ad=as.data.table(g$AD)
+	  colnames(ad)=paste0('AD_',colnames(ad))
+	  mutations=cbind(mutations,ad)
+	  # mutations$DP=sapply(g$AD[,'TUMOR'], sum)
+	  # mutations$AD=sapply(g$AD[,'TUMOR'], "[[", 2)
+	  # mutations$DPn=sapply(g$AD[,'NORMAL'], sum)
+	  # mutations$ADn=sapply(g$AD[,'NORMAL'], "[[", 2)
+	  mutations$reads=''
+	  temp=sapply(g$AD[,'TUMOR'], "[[", 2)
+	  mutations$reads[temp<5]='<5'
+	  mutations$reads[temp>=5]='≥5'
+	
+	  # add counts from the new sources
+	  suppressWarnings( {
+	    t=unlist(lapply(X=inf$CAF,FUN=max,na.rm=T))
+	    t[is.infinite(t)]=0
+	    mutations$CAF=t
+	    t=unlist(lapply(X=inf$SWAF,FUN=max,na.rm=T))
+	    t[is.infinite(t)]=0
+	    mutations$SWAF=t
+	    t=unlist(lapply(X=inf$TOPMED,FUN=max,na.rm=T))
+	    t[is.infinite(t)]=0
+	    mutations$TOPMED=t
+	  } )
+	}
+}
+
+write("##################################################################################################################",stdout())
+write("#                                         Pathfindr processing...                                                #",stdout())
+write("##################################################################################################################",stdout())
+write("\n\n",stdout())
+
+# uncomment to enable modules 
+
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+#write("x                                             ControlFREEC                                                      x",stderr());
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+## read control freec result files
+#freec_Tratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_ratio.txt',files,perl = T)]
+#freec_Nratio_file <- files[grep(pattern = '[TR].hg38.pileup.gz_normal_ratio.txt',files,perl = T)][1]
+#freec_Tbaf_file <- files[grep(pattern = '[TR].hg38.pileup.gz_BAF.txt',files,perl = T)]
+#freec_Nbaf_file <- files[grep(pattern = '[BN].hg38.pileup.gz_BAF.txt',files,perl = T)][1]
+#freec_info_file <- files[grep(pattern = 'hg38.pileup.gz_info.txt',files,perl = T)]
+#freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",files,perl = T)]
+#
+#write("ControlFREEC files:",stdout())
+#printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
+#loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
+
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+#write("x                                             ASCAT                                                             x",stderr());
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+#ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.LogR$",files)]
+#ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.LogR$",files)][1]
+#ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.BAF$",files)]
+#ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.BAF$",files)][1]
+#ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)]
+#write("ASCAT files:",stdout())
+#printList( list(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file) )
+#loadASCAT(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file)
+
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+#write("x                                             Manta                                                             x",stderr());
+#write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+#manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)
+#manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)[1]
+#cosmic_fusions = fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
+#write("Files for Manta structural variants: ", stdout())
+#printList( list(manta_tumor_file,manta_normal_file) )
+## TODO: sort it out to be local or a general on-demand object
+#allfusionpairs=NULL
+#allfusion=tumorgenes[grep('fusion',`Role in Cancer`),`Gene Symbol`]
+#
+#for (i in 1:length(allfusion)) {
+#  t=trimws(strsplit(tumorgenes[allfusion[i],`Translocation Partner`],', ')[[1]])
+#  if (length(t)>0) 
+#		for (j in 1:length(t))
+# 		allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
+#}
+#loadManta(manta_tumor_file,manta_normal_file)
+
+write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+write("x                                             Mutect2 with GATK 3.8                                             x",stderr());
+write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
+mutect2_file <- grep(pattern = ".*mutect2_.*AF.*vep.ann.vcf$",files,value = T)
+
+loadMutect2(mutect2_file)
