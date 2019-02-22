@@ -34,5 +34,6 @@ if [ -z ${outputFile} ]; then echo "Missing output file name"; usage; fi
 
 #R -e "rmarkdown::render('../caw-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
 #R -e "rmarkdown::render('${PFDIR}/Sarek-view.Rmd', knit_root_dir='${sample_dir}', output_file='${outputFile}', params=list(reference_data='${reference_dir}'))" 
-Rscript Sarek-PF.R -r ${reference_dir} -o ${outputFile} -s ${sample_dir}
+#Rscript Sarek-PF.R -r ${reference_dir} -o ${outputFile} -s ${sample_dir}
+Rscript Sarek-PF-with-modules.R -r ${reference_dir} -o ${outputFile} -s ${sample_dir}
 
