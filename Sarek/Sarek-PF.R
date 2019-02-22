@@ -50,19 +50,6 @@ write_tables=TRUE
 reference_genome='GRCh38'
 write(paste("Reference genome: ",reference_genome),stdout())
 
-# we are going to read quite a few files, and are expecting them to be there at 
-# their place
-checkFileExistence <- function(searchPattern, files) {
-	fileToSearch <- grep(searchPattern, files, value=T)
-	if(!length(fileToSearch)) {
-		write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-		write(paste(" ERROR: File is missing. Search pattern is:",searchPattern),stderr());
-		write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-		q(status=1)
-	}
-	fileToSearch
-}
-
 # read all filenames we have in the current directory
 files <- dir(path=sample_dir,recursive = T,full.names = T)
 # get rid filenames that we are not interested in 
@@ -136,9 +123,9 @@ local_tumorgenes=fread(local_tumorgenes_data,key='Gene')[Gene!='',1:2]
 alltumorgenes=unique(c(tumorgenes$`Gene Symbol`,local_tumorgenes$Gene))
 alltier1=union(tumorgenes[Tier==1,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==1,Gene])
 alltier2=union(tumorgenes[Tier==2,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==2,Gene])
-
 ##################################### ControlFREEC #####################################
 loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) {
+
   cnvs=NULL
   freec_cnv=NULL
   samplename=NULL
@@ -146,8 +133,8 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
   if (!is.na(freec_Tratio_file[1])) {
     # extract sample names
     for (s in 1:length(freec_Tratio_file)) samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
-		write("Sample name, Tratio, Tbaf")
-		printList(samplename)
+		write("Sample name, Tratio, Tbaf",stdout())
+		write(str(samplename),stdout())
     for (s in 1:length(freec_Tratio_file)) {
       # tumor log ratio
       temp <- fread(file = freec_Tratio_file[s])
@@ -209,7 +196,10 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
         cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
         tratio=NA,
         tmaf=NA)
+			write(paste(sample,i),stdout())
+			#browser()
       ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
+			write(str( tratio[sample][Chromosome==chrsz$chr[i]]),stdout())
       for (j in 1:nrow(temp)) {
         ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
         if (sum(ix)>20) {
@@ -294,6 +284,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
 	# return with
 	#c(tratio,nratio)
 }
+
 
 loadASCAT <-function(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file) {
 

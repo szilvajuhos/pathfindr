@@ -1,0 +1,9 @@
+Package: pathfindr
+Type: Package
+Title: Prioritizing somatic and germline calls
+Version: 1.0
+Date: 2019-02-21
+Author: Markus Mayrhofer, Szilveszter Juhos
+Maintainer: <szilveszter.juhos@scilifelab.se>
+Description: This module intended use is to process annotated calls from a Sarek ( https://github.com/SciLifeLab/Sarek ) run
+License: MIT
