@@ -6,3 +6,4 @@ Data
 *.gitignore
 VennDiagram*
 *.vcf
+.Rproj.user
