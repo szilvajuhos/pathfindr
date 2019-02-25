@@ -7,21 +7,28 @@ library(tryCatchLog)
 library(futile.logger)
 
 # Command-line arguments to read
-option_list = list(
-  make_option(c("-r", "--reference"), type="character", default=NULL, 
-              help="reference directory name", metavar="character"),
-  make_option(c("-o", "--out"), type="character", default="out.txt", 
-              help="output file name [default= %default]", metavar="character"),
-  make_option(c("-s", "--sample"), type="character", default=getwd(), 
-              help="Sample directory [default= %default]", metavar="character")
-); 
+# option_list = list(
+#   make_option(c("-r", "--reference"), type="character", default=NULL, 
+#               help="reference directory name", metavar="character"),
+#   make_option(c("-o", "--out"), type="character", default="out.txt", 
+#               help="output file name [default= %default]", metavar="character"),
+#   make_option(c("-s", "--sample"), type="character", default=getwd(), 
+#               help="Sample directory [default= %default]", metavar="character")
+# ); 
+# 
+# opt_parser = OptionParser(option_list=option_list);
+opt=NULL
+# opt = parse_args(opt_parser);
+# if (is.null(opt$reference)) {
+#   print_help(opt_parser)
+#   stop("Reference dir must be supplied.\n", call.=FALSE)
+# }
 
-opt_parser = OptionParser(option_list=option_list);
-opt = parse_args(opt_parser);
-if (is.null(opt$reference)) {
-  print_help(opt_parser)
-  stop("Reference dir must be supplied.\n", call.=FALSE)
-}
+# due to the inherent idiocity of RStudio, I have to hard-code options
+opt$reference = '/home/szilva/dev/pathfindr/Sarek/reference_data/'
+opt$sample <- './test'
+opt$out <- 'bugger'
+
 
 library(pathfindr)
 # we are using tictoc to benchmark runtimes all over the code
@@ -136,6 +143,7 @@ freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",file
 
 write("ControlFREEC files:",stdout())
 printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
+browser()
 tryCatchLog(loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file))
 toc()
 
