@@ -79,7 +79,7 @@ sampleData <- data.table(
 ##################################### make chromosomes #####################################
 # TODO: read it from the FASTA index file
 if (reference_genome=='GRCh38') chrsz <- data.table(
-  chr = paste0('chr',c("1", "2", "3", "4", "5", "6", "7", "8", 
+  chrom = paste0('chr',c("1", "2", "3", "4", "5", "6", "7", "8", 
           "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", 
           "20", "21", "22", "X", "Y")), 
   label = c("1", "2", "3", "4", "5", 
@@ -111,7 +111,7 @@ tumorgenes$end=as.numeric(str_replace(string=temp,pattern = '-.*',replacement = 
 tumorgenes$cumstart=NA; tumorgenes$cumend=NA
 
 for (i in 1:nrow(chrsz)) {
-    ix <- tumorgenes$chr==chrsz$chr[i]
+    ix <- tumorgenes$chr==chrsz$chrom[i]
     tumorgenes$cumstart[ix] <- tumorgenes$start[ix]+chrsz$starts[i]
     tumorgenes$cumend[ix] <- tumorgenes$end[ix]+chrsz$starts[i]
 }
@@ -144,7 +144,8 @@ freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",file
 write("ControlFREEC files:",stdout())
 printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
 browser()
-tryCatchLog(loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file))
+#tryCatchLog(loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file))
+loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
 toc()
 
 #tic("ASCAT")
