@@ -91,7 +91,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
         cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
         tratio=NA,
         tmaf=NA)
-			browser(5)
+			browser()
       ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
       for (j in 1:nrow(temp)) {
         ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
