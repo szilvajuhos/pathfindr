@@ -17,7 +17,13 @@ checkFileExistence <- function(searchPattern, files) {
 }
 
 ##################################### ControlFREEC #####################################
-loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) {
+loadControlFREEC <- function(
+														 freec_Tratio_file,
+														 freec_Nratio_file, 
+														 freec_Tbaf_file, 
+														 freec_Nbaf_file, 
+														 freec_info_file, 
+														 freec_cnv_file ) {
 
   cnvs=NULL
   freec_cnv=NULL
@@ -25,7 +31,8 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
   tratio=NULL; tbaf=NULL
   if (!is.na(freec_Tratio_file[1])) {
     # extract sample names
-    for (s in 1:length(freec_Tratio_file)) samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
+    for (s in 1:length(freec_Tratio_file)) 
+						samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
 		write("Sample name, Tratio, Tbaf",stdout())
 		write(str(samplename),stdout())
     for (s in 1:length(freec_Tratio_file)) {
@@ -44,7 +51,6 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
       tbaf=rbind(tbaf,temp)
       setkey(tbaf,'sample')
     }
-		#write(str(tratio),stdout)
     # normal log ratio
     write("Normal log ratio and BAF",stdout());
     nratio <- fread(file = freec_Nratio_file)[,1:6]
@@ -53,11 +59,12 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
  
     # manipulate for plot:
     write("Reshape data for plotting",stdout());
+		tic("Reshape")
     tratio$cumstart <- tratio$Start
     nratio$cumstart <- nratio$Start
     tbaf$cumstart <- tbaf$Position
     nbaf$cumstart <- nbaf$Position
-    tempchr=substr(chrsz$chr,4,6)
+    tempchr=substr(chrsz$chrom,4,6)
     for (i in 2:nrow(chrsz)) {
       ix <- tratio$Chromosome==tempchr[i]
       tratio$cumstart[ix] <- tratio$Start[ix]+chrsz$starts[i]
@@ -78,36 +85,40 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
     nratio$Chromosome=paste0('chr',nratio$Chromosome)
     tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
     nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
- 
+ 		toc()
     # smooth data for plot
     write("Smoothing",stdout());
     binned <- NULL
 		write(str(tratio),stdout())
-    for (sample in samplename) for (i in 1:nrow(chrsz)) {
-      temp <- data.table(
-        sample,
-        chr=chrsz$chr[i],
-        pos=seq(5e5,chrsz$length[i],5e5),
-        cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
-        tratio=NA,
-        tmaf=NA)
-			browser(5)
-      ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
-      for (j in 1:nrow(temp)) {
-        ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
-        if (sum(ix)>20) {
-          d <- density(ctratio$Ratio[ix],na.rm=T)
-          temp$tratio[j] <- d$x[which.max(d$y)]
-          t=ctratio$BAF[ix]
-          t=t[!is.na(t)]
-          if (length(t)>10) {
-            d <- density(ctratio$BAF[ix],na.rm=T)
-            temp$tmaf[j] <- d$x[which.max(d$y)]
-          }
-        }
-      }
-      binned <- rbind(binned,temp)
-    }
+    for (sample in samplename) {
+			for (i in 1:nrow(chrsz)) {
+				#write(str(Chromosome==chrsz$chrom[i]),stdout())
+				write(paste("CHROM: ",str(Chromosome)),stdout())
+      	ctratio <- tratio[sample][Chromosome==chrsz$chrom[i]]
+      	temp <- data.table(
+        				sample,
+        				chrom=chrsz$chr[i],
+        				pos=seq(5e5,chrsz$length[i],5e5),
+        				cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
+        				tratio=NA,
+        				tmaf=NA)
+
+      	for (j in 1:nrow(temp)) {
+        	ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
+        		if (sum(ix)>20) {
+          		d <- density(ctratio$Ratio[ix],na.rm=T)
+          		temp$tratio[j] <- d$x[which.max(d$y)]
+          		t=ctratio$BAF[ix]
+          		t=t[!is.na(t)]
+          		if (length(t)>10) {
+            		d <- density(ctratio$BAF[ix],na.rm=T)
+            		temp$tmaf[j] <- d$x[which.max(d$y)]
+          		}
+        		}
+      	}
+      	binned <- rbind(binned,temp)
+    	}
+		}
     setkey(binned,'sample')
  
  

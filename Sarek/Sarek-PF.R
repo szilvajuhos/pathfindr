@@ -159,6 +159,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
  
     # manipulate for plot:
     write("Reshape data for plotting",stdout());
+		tic("Reshape")
     tratio$cumstart <- tratio$Start
     nratio$cumstart <- nratio$Start
     tbaf$cumstart <- tbaf$Position
@@ -184,7 +185,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
     nratio$Chromosome=paste0('chr',nratio$Chromosome)
     tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
     nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
- 
+ 		toc()
     # smooth data for plot
     write("Smoothing",stdout());
     binned <- NULL
@@ -196,7 +197,7 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
         cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
         tratio=NA,
         tmaf=NA)
-			write(paste(sample,i),stdout())
+			write(paste("CHROM: ",str(Chromosome)),stdout())
 			#browser()
       ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
 			write(str( tratio[sample][Chromosome==chrsz$chr[i]]),stdout())
