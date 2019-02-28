@@ -18,12 +18,13 @@ checkFileExistence <- function(searchPattern, files) {
 
 ##################################### ControlFREEC #####################################
 loadControlFREEC <- function(
-														 freec_Tratio_file,
-														 freec_Nratio_file, 
-														 freec_Tbaf_file, 
-														 freec_Nbaf_file, 
-														 freec_info_file, 
-														 freec_cnv_file ) {
+														freec_Tratio_file,
+														freec_Nratio_file, 
+														freec_Tbaf_file, 
+														freec_Nbaf_file, 
+														freec_info_file, 
+														freec_cnv_file,
+														chrsz ) {
 
   cnvs=NULL
   freec_cnv=NULL
@@ -34,7 +35,7 @@ loadControlFREEC <- function(
     for (s in 1:length(freec_Tratio_file)) 
 						samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
 		write("Sample name, Tratio, Tbaf",stdout())
-		write(str(samplename),stdout())
+		#write(str(samplename),stdout())
     for (s in 1:length(freec_Tratio_file)) {
       # tumor log ratio
       temp <- fread(file = freec_Tratio_file[s])
@@ -52,11 +53,12 @@ loadControlFREEC <- function(
       setkey(tbaf,'sample')
     }
     # normal log ratio
-    write("Normal log ratio and BAF",stdout());
+		tic("logratio")
+    write("Normal log ratio and BAF",stdout())
     nratio <- fread(file = freec_Nratio_file)[,1:6]
     # normal BAF
     nbaf <- fread(freec_Nbaf_file)[,1:3]
- 
+ 		toc()
     # manipulate for plot:
     write("Reshape data for plotting",stdout());
 		tic("Reshape")
@@ -64,7 +66,11 @@ loadControlFREEC <- function(
     nratio$cumstart <- nratio$Start
     tbaf$cumstart <- tbaf$Position
     nbaf$cumstart <- nbaf$Position
-    tempchr=substr(chrsz$chrom,4,6)
+    tempchr=substr(chrsz$chr,4,6)
+		#write("TEMPCHR",stdout())
+		#write(str(tempchr),stdout())
+		#write("CHRSZ",stdout())
+		#write(str(chrsz),stdout())
     for (i in 2:nrow(chrsz)) {
       ix <- tratio$Chromosome==tempchr[i]
       tratio$cumstart[ix] <- tratio$Start[ix]+chrsz$starts[i]
@@ -77,6 +83,9 @@ loadControlFREEC <- function(
     }
  
     # modify for plot
+		#write("BEFORE",stdout())
+		#write(str(nratio),stdout())
+		#write(str(nbaf),stdout())
     tratio$CopyNumber[tratio$CopyNumber>4] <- 4
     nratio$CopyNumber[nratio$CopyNumber>4] <- 4
     tratio$BAF[tratio$BAF<0.5 | tratio$BAF>1] <- NA
@@ -85,16 +94,30 @@ loadControlFREEC <- function(
     nratio$Chromosome=paste0('chr',nratio$Chromosome)
     tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
     nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
+		#write("AFTER",stdout())
+		#write(str(nratio),stdout())
+		#write(str(nbaf),stdout())
  		toc()
     # smooth data for plot
     write("Smoothing",stdout());
     binned <- NULL
+		#write(str(tratio),stdout())
+		write("##########################################################################",stdout())
+		write(" ------------- CHRSZ is ---------- ",stdout())
+		write(str(chrsz),stdout())
+		write(" ------------- TRATIO is ---------- ",stdout())
 		write(str(tratio),stdout())
+		write(" ------------- for chr1 ---------- ",stdout())
+		bugger <- subset(tratio,Chromosome == "chr1")
+		write(str(bugger),stdout())
+		write(" ------------- for chr2 ---------- ",stdout())
+		bugger <- subset(tratio,Chromosome == "chr2")
+		write(str(bugger),stdout())
+
+		q()
     for (sample in samplename) {
 			for (i in 1:nrow(chrsz)) {
-				#write(str(Chromosome==chrsz$chrom[i]),stdout())
-				write(paste("CHROM: ",str(Chromosome)),stdout())
-      	ctratio <- tratio[sample][Chromosome==chrsz$chrom[i]]
+				chrom <- chrsz$chr[i]
       	temp <- data.table(
         				sample,
         				chrom=chrsz$chr[i],
@@ -102,7 +125,10 @@ loadControlFREEC <- function(
         				cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
         				tratio=NA,
         				tmaf=NA)
-
+				# DIE HARD
+				print(str(chrom))
+      	ctratio <- tratio
+				write(paste("CTRATIO is ",str(ctratio)),stdout())
       	for (j in 1:nrow(temp)) {
         	ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
         		if (sum(ix)>20) {
@@ -183,10 +209,8 @@ loadControlFREEC <- function(
     write(paste0(" *** ControlFREEC results written to ",outfile),stdout())
  
 		# TODO: make it callable if you need a HTML report
-    # tableWrapper(freec_cnv) # table in report
+   # tableWrapper(freec_cnv) # table in report
 	}
-	# return with
-	#c(tratio,nratio)
 }
 
 

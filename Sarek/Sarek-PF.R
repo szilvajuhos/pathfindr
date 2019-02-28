@@ -152,11 +152,14 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
       setkey(tbaf,'sample')
     }
     # normal log ratio
+		tic("logratio")
     write("Normal log ratio and BAF",stdout());
     nratio <- fread(file = freec_Nratio_file)[,1:6]
     # normal BAF
     nbaf <- fread(freec_Nbaf_file)[,1:3]
- 
+		#write(str(nratio),stdout())
+		#write(str(nbaf),stdout())
+ 		toc()
     # manipulate for plot:
     write("Reshape data for plotting",stdout());
 		tic("Reshape")
@@ -165,6 +168,10 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
     tbaf$cumstart <- tbaf$Position
     nbaf$cumstart <- nbaf$Position
     tempchr=substr(chrsz$chr,4,6)
+		#write("TEMPCHR",stdout())
+		#write(str(tempchr),stdout())
+		#write("CHRSZ",stdout())
+		#write(str(chrsz),stdout())
     for (i in 2:nrow(chrsz)) {
       ix <- tratio$Chromosome==tempchr[i]
       tratio$cumstart[ix] <- tratio$Start[ix]+chrsz$starts[i]
@@ -177,6 +184,9 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
     }
  
     # modify for plot
+		#write("BEFORE",stdout())
+		#write(str(nratio),stdout())
+		#write(str(nbaf),stdout())
     tratio$CopyNumber[tratio$CopyNumber>4] <- 4
     nratio$CopyNumber[nratio$CopyNumber>4] <- 4
     tratio$BAF[tratio$BAF<0.5 | tratio$BAF>1] <- NA
@@ -185,36 +195,41 @@ loadControlFREEC <- function(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_fil
     nratio$Chromosome=paste0('chr',nratio$Chromosome)
     tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
     nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
+		#write("AFTER",stdout())
+		#write(str(nratio),stdout())
+		#write(str(nbaf),stdout())
  		toc()
     # smooth data for plot
     write("Smoothing",stdout());
     binned <- NULL
-    for (sample in samplename) for (i in 1:nrow(chrsz)) {
-      temp <- data.table(
-        sample,
-        chr=chrsz$chr[i],
-        pos=seq(5e5,chrsz$length[i],5e5),
-        cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
-        tratio=NA,
-        tmaf=NA)
-			write(paste("CHROM: ",str(Chromosome)),stdout())
-			#browser()
-      ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
-			write(str( tratio[sample][Chromosome==chrsz$chr[i]]),stdout())
-      for (j in 1:nrow(temp)) {
-        ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
-        if (sum(ix)>20) {
-          d <- density(ctratio$Ratio[ix],na.rm=T)
-          temp$tratio[j] <- d$x[which.max(d$y)]
-          t=ctratio$BAF[ix]
-          t=t[!is.na(t)]
-          if (length(t)>10) {
-            d <- density(ctratio$BAF[ix],na.rm=T)
-            temp$tmaf[j] <- d$x[which.max(d$y)]
-          }
-        }
-      }
-      binned <- rbind(binned,temp)
+    for (sample in samplename) {
+			for (i in 1:nrow(chrsz)) {
+        temp <- data.table(
+        				sample,
+        				chr=chrsz$chr[i],
+        				pos=seq(5e5,chrsz$length[i],5e5),
+        				cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
+        				tratio=NA,
+        				tmaf=NA)
+				# DIE HARD
+      	ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
+				write("CTRATIO",stdout())
+				write(str(ctratio),stdout())
+      	for (j in 1:nrow(temp)) {
+        	ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
+        	if (sum(ix)>20) {
+          	d <- density(ctratio$Ratio[ix],na.rm=T)
+          	temp$tratio[j] <- d$x[which.max(d$y)]
+          	t=ctratio$BAF[ix]
+          	t=t[!is.na(t)]
+          	if (length(t)>10) {
+            	d <- density(ctratio$BAF[ix],na.rm=T)
+            	temp$tmaf[j] <- d$x[which.max(d$y)]
+          	}
+        	}
+      	}
+      	binned <- rbind(binned,temp)
+			}
     }
     setkey(binned,'sample')
  
@@ -1904,7 +1919,7 @@ ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.BAF$",files)][1]
 ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)]
 write("ASCAT files:",stdout())
 printList( list(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file) )
-loadASCAT(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file)
+#loadASCAT(ascat_Tratio_file,ascat_Nratio_file,ascat_Tbaf_file,ascat_Nbaf_file,ascat_segment_file)
 toc()
 
 tic("Manta")
@@ -1927,10 +1942,11 @@ for (i in 1:length(allfusion)) {
 		for (j in 1:length(t))
  		allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
 }
-loadMantaTumor(manta_tumor_file)
-loadMantaNormal(manta_normal_file)
+#loadMantaTumor(manta_tumor_file)
+#loadMantaNormal(manta_normal_file)
 toc()
 
+q()
 tic("Database read")
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
 write("x                                     Reading databases for SNV and small indel prioritisation                  x",stderr());

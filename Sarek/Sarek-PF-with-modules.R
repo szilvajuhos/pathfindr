@@ -78,6 +78,7 @@ sampleData <- data.table(
 
 ##################################### make chromosomes #####################################
 # TODO: read it from the FASTA index file
+chrsz=NULL
 if (reference_genome=='GRCh38') chrsz <- data.table(
   chrom = paste0('chr',c("1", "2", "3", "4", "5", "6", "7", "8", 
           "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", 
@@ -143,9 +144,15 @@ freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",file
 
 write("ControlFREEC files:",stdout())
 printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
-browser()
 #tryCatchLog(loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file))
-loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
+loadControlFREEC(
+								 freec_Tratio_file,
+								 freec_Nratio_file, 
+								 freec_Tbaf_file, 
+								 freec_Nbaf_file, 
+								 freec_info_file, 
+								 freec_cnv_file,
+								 chrsz)
 toc()
 
 #tic("ASCAT")
