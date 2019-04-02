@@ -136,8 +136,9 @@ if (project == 'BTB') {
   files <- dir(recursive = T,full.names = T)
 
   remove=unique(c(grep(pattern = '.png',x = files),
-                  #grep(pattern = 'ControlFreec',x = files),
+                  grep(pattern = 'old.ControlFreec',x = files),
                   grep(pattern = 'Annotation.old',x = files),
+                  grep(pattern = 'Annotation/Manta/VEP.CADD',x = files),
                   grep(pattern = '/work/',x = files)))
   
   if (length(remove)>0) files <- files[-remove]
@@ -149,6 +150,7 @@ if (project == 'BTB') {
   freec_Nbaf_file <- files[grep(pattern = '[BN].hg38.pileup.gz_BAF.txt',files,perl = T)][1]
   freec_info_file <- files[grep(pattern = 'hg38.pileup.gz_info.txt',files,perl = T)]
   freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",files,perl = T)]
+  write("-----------------------------------------",stderr());
   write("FREEC files",stderr());
   write(paste("freec_Tratio_file", freec_Tratio_file),stderr());
   write(paste("freec_Nratio_file", freec_Nratio_file),stderr());
@@ -156,13 +158,13 @@ if (project == 'BTB') {
   write(paste("freec_Nbaf_file",   freec_Nbaf_file),stderr());
   write(paste("freec_info_file",   freec_info_file),stderr());
   write(paste("freec_cnv_file",    freec_cnv_file ),stderr());
-
   # Ascat files
   ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.LogR$",files)]
   ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.LogR$",files)][1]
   ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.BAF$",files)]
   ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN]\\.BAF$",files)][1]
   ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR]\\.cnvs\\.txt$",files)]
+  write("-----------------------------------------",stderr());
   write("ASCAT files: ",stderr())
   write(paste("ascat_Tratio_file:",ascat_Tratio_file),stderr())
   write(paste("ascat_Nratio_file:",ascat_Nratio_file),stderr())
@@ -175,22 +177,36 @@ if (project == 'BTB') {
   # ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*01\\.BAF$",files)]
   # ascat_segment_file <- files[grep(pattern = "^.*Ascat.*02\\.cnvs\\.txt$",files)]
   # Manta structural variant files
-  manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)
-  manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)[1]
+  manta_tumor_file <- grep(pattern = ".*VEP\\.CADD*.*Manta_.*vs.*somaticSV.*ann*.vcf$",files,value = T)
+  manta_normal_file <- grep(pattern = ".*VEP\\.CADD*.*Manta_.*vs.*diploidSV.*ann*.vcf$",files,value = T)[1]
+  write("-----------------------------------------",stderr());
+  write("Manta files: ",stderr())
+  write(paste("manta_tumor_file:",manta_tumor_file),stderr())
+  write(paste("manta_normal_file:",manta_normal_file),stderr())
   # Haplotype caller variant files
-  haplotypecaller_T_file <- grep(pattern = ".*haplotypecaller.*[TR].*AF.*vep.ann.vcf$",files,value = T)
+  haplotypecaller_T_file <- grep(pattern = ".*VEP\\.CADD.*haplotypecaller.*[TR].*AF.*vep.ann.vcf$",files,value = T)
   # haplotypecaller_T_file <- 
   #   grep(pattern = "^.*Annotation/VEP/haplotypecaller.*02.*vcf$",files,value = T)[1]
-  haplotypecaller_N_file <- grep(pattern = ".*haplotypecaller.*[NB].*AF.*vep.ann.vcf$",files,value = T)
+  haplotypecaller_N_file <- grep(pattern = ".*VEP\\.CADD.*haplotypecaller.*[NB].*AF.*vep.ann.vcf$",files,value = T)
+  write("-----------------------------------------",stderr());
+  write(" HaplotypeCaller files: ",stderr())
+  write(paste("haplotypecaller_N_file:",haplotypecaller_N_file),stderr())
+  write(paste("haplotypecaller_T_file:",haplotypecaller_T_file),stderr())
   # haplotypecaller_N_file <- 
   #   grep(pattern = "^.*Annotation/VEP/haplotypecaller.*01.*vcf$",files,value = T)[1]
   # snpEff+VEP Mutect2 file
-  # mutect2_file <- grep(pattern = "^.*Annotation/VEP/mutect2_.*[TR]_vs_.*[BN]\\.vcf.*vcf$",files,value = T)[1]
-  mutect2_file <- grep(pattern = ".*mutect2_.*AF.*vep.ann.vcf$",files,value = T)
+  mutect2_file <- grep(pattern = ".VEP\\.CADD.*mutect2_.*AF.*vep.ann.vcf$",files,value = T)
+  write("-----------------------------------------",stderr());
+  write(" MuTect2 files: ",stderr())
+  write(paste("mutect2_file:",mutect2_file),stderr())
   # snpEff + VEP Strelka snv file
-  strelka_snv_file <- grep(pattern = ".*Strelka_.*_somatic_snvs.*AF.*vep.ann.vcf$",files,value = T)
+  strelka_snv_file <- grep(pattern = ".*VEP\\.CADD.*Strelka_.*_somatic_snvs.*AF.*vep.ann.vcf$",files,value = T)
   # snpEff + VEP Strelka indel file
-  strelka_indel_file <- grep(pattern = ".*Strelka_.*_somatic_indels.*AF.*vep.ann.vcf$",files,value = T)
+  strelka_indel_file <- grep(pattern = "./*VEP\\.CADD.*Strelka_.*_somatic_indels.*AF.*vep.ann.vcf$",files,value = T)
+  write("-----------------------------------------",stderr());
+  write(" Strelka files: ",stderr())
+  write(paste("strelka_snv_file:",strelka_snv_file),stderr())
+  write(paste("strelka_indel_file:",strelka_indel_file),stderr())
 }
 
 
@@ -402,449 +418,449 @@ cosmic_fusions=fread('~/reports/reference_data/cosmic_fusions_table.csv',key = '
 ## Copy number {.tabset}
 
 ### ControlFreec
-<!-- Read Control Freec copy number data -->
-```{r load_control_freec}
-cnvs=NULL
-freec_cnv=NULL
-samplename=NULL
-if (project=='BTB') if (!is.na(freec_Tratio_file[1])) {
-  # extract sample names
-  for (s in 1:length(freec_Tratio_file)) samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
-  
-  tratio=NULL; tbaf=NULL
-  for (s in 1:length(freec_Tratio_file)) {
-    # tumor log ratio
-    temp <- fread(file = freec_Tratio_file[s])
-    temp$sample=samplename[s]
-    temp=temp[,c(10,1:6)]
-    temp$CopyNumber[1:2] <- c(0,4) # to secure range of colors
-    tratio=rbind(tratio,temp)
-    setkey(tratio,'sample')
-    
-    # tumor BAF
-    temp <- fread(freec_Tbaf_file[s])[,1:3]
-    temp$sample=samplename[s]
-    temp=temp[,c(4,1:3)]
-    tbaf=rbind(tbaf,temp)
-    setkey(tbaf,'sample')
-  }
-  # normal log ratio
-  nratio <- fread(file = freec_Nratio_file)[,1:6]
-  # normal BAF
-  nbaf <- fread(freec_Nbaf_file)[,1:3]
-
-  # manipulate for plot:
-  tratio$cumstart <- tratio$Start
-  nratio$cumstart <- nratio$Start
-  tbaf$cumstart <- tbaf$Position
-  nbaf$cumstart <- nbaf$Position
-  tempchr=substr(chrsz$chr,4,6)
-  for (i in 2:nrow(chrsz)) {
-    ix <- tratio$Chromosome==tempchr[i]
-    tratio$cumstart[ix] <- tratio$Start[ix]+chrsz$starts[i]
-    ix <- nratio$Chromosome==tempchr[i]
-    nratio$cumstart[ix] <- nratio$Start[ix]+chrsz$starts[i]
-    ix <- tbaf$Chromosome==tempchr[i]
-    tbaf$cumstart[ix] <- tbaf$Position[ix]+chrsz$starts[i]
-    ix <- nbaf$Chromosome==tempchr[i]
-    nbaf$cumstart[ix] <- nbaf$Position[ix]+chrsz$starts[i]
-  }
-  
-  # modify for plot
-  tratio$CopyNumber[tratio$CopyNumber>4] <- 4
-  nratio$CopyNumber[nratio$CopyNumber>4] <- 4
-  tratio$BAF[tratio$BAF<0.5 | tratio$BAF>1] <- NA
-  nratio$BAF[nratio$BAF<0.5 | nratio$BAF>1] <- NA
-  tratio$Chromosome=paste0('chr',tratio$Chromosome)
-  nratio$Chromosome=paste0('chr',nratio$Chromosome)
-  tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
-  nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
-  
-  # smooth data for plot
-  binned <- NULL
-  for (sample in samplename) for (i in 1:nrow(chrsz)) {
-    temp <- data.table(
-      sample,
-      chr=chrsz$chr[i],
-      pos=seq(5e5,chrsz$length[i],5e5),
-      cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
-      tratio=NA,
-      tmaf=NA)
-    ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
-    for (j in 1:nrow(temp)) {
-      ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
-      if (sum(ix)>20) {
-        d <- density(ctratio$Ratio[ix],na.rm=T)
-        temp$tratio[j] <- d$x[which.max(d$y)]
-        t=ctratio$BAF[ix]
-        t=t[!is.na(t)]
-        if (length(t)>10) {
-          d <- density(ctratio$BAF[ix],na.rm=T)
-          temp$tmaf[j] <- d$x[which.max(d$y)]
-        }
-      }
-    }
-    binned <- rbind(binned,temp)
-  }
-  setkey(binned,'sample')
-  
-
-  # check which regions are worth reporting
-  # cnv file
-  cnvs=NULL
-  for (s in 1:length(samplename)) {
-    temp <- as.data.table(read.csv(freec_cnv_file[s],sep='\t',header=F))[,1:8]
-    names(temp) <- c('chr','start','end','copies','effect','genotype','value','type')
-    temp$sample=samplename[s]
-    temp=temp[,c(9,1:8)]
-    cnvs=rbind(cnvs,temp)
-    setkey(cnvs,'sample')
-  }
-  freec_loh=cnvs[grep('^A*$',genotype)][type=='somatic'][copies<4]
-  freec_loh$chr=paste0('chr',freec_loh$chr)
-  cnvs=cnvs[effect!='neutral'] # this removes LOH from CNV table
-  cnvs$length=paste0(round((cnvs$end-cnvs$start)/1e6,2),'M')
-  cnvs$rank_score <- 0
-  cnvs$rank_terms <- ''
-  cnvs$cancer_genes <- ''
-  
-  for (i in cnvs[end-start < 50e6, .I]) {
-    genes=tumorgenes[chr==paste0('chr',cnvs$chr[i]) & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
-    if (length(genes)>0) { # if any of our cancer genes
-      cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
-      if (any(genes %in% alltier1,na.rm = T)) {
-        cnvs$rank_score[i]=2
-        cnvs$rank_terms[i]='T1_gene'
-      } else if (any(genes %in% alltier2,na.rm = T)) {
-        cnvs$rank_score[i]=2
-        cnvs$rank_terms[i]='T2_gene'
-      }
-    }
-    
-    # if the effect is focal
-    if (cnvs[i,end-start]<3e6) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
-    }
-    
-    # if the effect is loss/gain/amp etc
-    if (cnvs$copies[i]==0) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+2
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'hz_loss')
-    } else if (cnvs$copies[i] > 5) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+2
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'high_amp')
-    } else if (cnvs$copies[i] > 2) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'dup')
-    } else if (cnvs$effect[i] =='loss') {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
-    }
-  }
-  
-  freec_cnv=cnvs[order(rank_score,decreasing = T)] # order by rank
-  if (write_tables) fwrite(freec_cnv,file=paste0(sampleData$name,'_freec_cnv.csv')) # write to file
-  
-  tableWrapper(freec_cnv) # table in report
-}
-```
-
-### Ascat
-<!-- Read ASCAT copy number data -->
-```{r load_ascat}
-
-ascat_cnv=NULL
-samplename=NULL
-if (length(ascat_Tratio_file)>0) {
-  # extract sample names
-  for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
-  
-  ascat_tratio=NULL; ascat_tbaf=NULL; ascat_cnv=NULL
-  for (s in 1:length(samplename)) {
-    # segmented copy number
-    temp=fread(file = ascat_segment_file[s])
-    temp$sample=samplename[s]
-    temp=temp[,c(6,1:5)]
-    temp$chr=paste0('chr',temp$chr)
-    ascat_cnv=rbind(ascat_cnv,temp)
-    setkey(ascat_cnv,'sample')
-    these_cnvs=temp # for use below
-    # tumor log ratio
-    temp=fread(file = ascat_Tratio_file[s])[,-1]
-    #if (project=='AML') temp$Chr=paste0('chr',temp) 
-    colnames(temp)[3]='LogR'
-    temp$sample=samplename[s]
-    temp=temp[order(Chr,Position),c(4,1:3)]
-    temp$Ratio=2^temp$LogR
-    temp$smoothed=runmed(x = temp$Ratio,k = 99)
-    temp$CopyNumber=2
-    temp$MinorCopy=1
-    for (i in 1:nrow(these_cnvs)) {
-      ix=temp$Chr==these_cnvs$chr[i] & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
-      if (!any(ix)) 
-        ix=temp$Chr==substr(these_cnvs$chr[i],4,6) & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
-      temp$CopyNumber[ix]=these_cnvs$nMajor[i]+these_cnvs$nMinor[i]
-      temp$MinorCopy[ix]=these_cnvs$nMinor[i]
-    }
-    temp$CopyNumber[temp$CopyNumber>4]=4
-    temp$CopyNumber[1:2]=c(0,4)
-    ascat_tratio=rbind(ascat_tratio,temp)
-    setkey(ascat_tratio,'sample')
-    # tumor BAF
-    temp=fread(ascat_Tbaf_file[s])[,-1]
-    colnames(temp)[3]='BAF'
-    temp=temp[which(BAF!=0 & BAF!=1)]
-    temp$sample=samplename[s]
-    temp=temp[order(Chr,Position),c(4,1:3)]
-    ascat_tbaf=rbind(ascat_tbaf,temp)
-    setkey(ascat_tbaf,'sample')
-  }
-  # normal BAF
-  ascat_nbaf=fread(ascat_Nbaf_file)[,-1]
-  colnames(ascat_nbaf)[3]='BAF'
-  ascat_nbaf=ascat_nbaf[which(BAF!=0 & BAF!=1)]
-
-  # join (T) log ratio and (T) BAF
-  #ascat_tratio=merge(ascat_tratio,ascat_tbaf,all.x=T)
-  #ascat_tratio=merge(ascat_tratio,ascat_nbaf,all.x=T)
-  
-  # manipulate for plot:
-  ascat_tratio$cumstart=ascat_tratio$Position
-  ascat_tbaf$cumstart=ascat_tbaf$Position
-  ascat_nbaf$cumstart=ascat_nbaf$Position
-  #ascat_cnv$LOH=''; ascat_cnv$LOH[ascat_cnv$nMinor==0]='LOH' <---- will use ascat_LOH instead
-  for (i in 2:nrow(chrsz)) {
-    ix=ascat_tratio$Chr==chrsz$chr[i]
-    ascat_tratio$cumstart[ix]=ascat_tratio$Position[ix]+chrsz$starts[i]
-    #no n...
-    ix=ascat_tbaf$Chr==chrsz$chr[i]
-    ascat_tbaf$cumstart[ix]=ascat_tbaf$Position[ix]+chrsz$starts[i]
-    ix=ascat_nbaf$Chr==chrsz$chr[i]
-    ascat_nbaf$cumstart[ix]=ascat_nbaf$Position[ix]+chrsz$starts[i]
-  }
- 
-
-  
-  # smooth data for view
-  ascat_binned=NULL
-  for (sample in samplename) for (i in 1:nrow(chrsz)) {
-    temp=data.table(
-      sample,
-      chr=chrsz$chr[i],
-      pos=seq(5e5,chrsz$length[i],5e5),
-      cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
-      tratio=NA,
-      tmaf=NA)
-    
-    tempLogR=ascat_tratio[sample][Chr==chrsz$chr[i]]
-    tempBAF=ascat_tbaf[sample][Chr==chrsz$chr[i]]
-    tempBAF$BAF=0.5+abs(tempBAF$BAF-0.5)
-    for (j in 1:nrow(temp)) {
-      ix = tempLogR$Position>temp$pos[j]-5e5 & tempLogR$Position<temp$pos[j]+5e5
-      if (sum(ix)>10) {
-        d <- density(2^tempLogR$LogR[ix],na.rm=T)
-        temp$tratio[j] <- d$x[which.max(d$y)]
-      }
-      ix = tempBAF$Position>temp$pos[j]-5e5 & tempBAF$Position<temp$pos[j]+5e5
-      if (sum(!is.na(tempBAF$BAF[ix]))>20) {
-        d=density(tempBAF$BAF[ix],na.rm=T)
-        temp$tmaf[j]=d$x[which.max(d$y)]
-      }
-    }
-    ascat_binned=rbind(ascat_binned,temp)
-  }
-  setkey(ascat_binned,'sample')
-
-  
-  ascat_loh=ascat_cnv[nMinor==0 & nMajor<4]
-  ascat_loh$chr=paste0('chr',ascat_loh$chr)
-  if (!exists('freec_loh')) freec_loh=ascat_loh # to make sure LOH is available if theres no freec
-  colnames(ascat_loh)[3:4]=c('start','end')
-  cnvs=ascat_cnv[nMajor+nMinor != 2] # this removes cnLOH
-  cnvs$length=paste0(round((cnvs$endpos-cnvs$startpos)/1e6,2),'M')
-  cnvs$rank_score <- 0
-  cnvs$rank_terms <- ''
-  cnvs$cancer_genes <- ''
-  
-  for (i in which(cnvs$endpos-cnvs$startpos < 50e6)) {
-    genes=tumorgenes[chr==cnvs$chr[i] & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
-    if (length(genes)>0) { # if any of our cancer genes
-      cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
-      if (any(genes %in% alltier1,na.rm = T)) {
-        cnvs$rank_score[i]=2
-        cnvs$rank_terms[i]='T1_gene'
-      } else if (any(genes %in% alltier2,na.rm = T)) {
-        cnvs$rank_score[i]=2
-        cnvs$rank_terms[i]='T2_gene'
-      }
-    }
-    
-    # if the effect is focal
-    if (cnvs[i,endpos-startpos]<3e6) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
-    }
-    
-    
-    
-    # if the effect is loss/gain/amp etc
-    if (cnvs[i,nMajor+nMinor]==0) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+2
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'hz_loss')
-    } else if (cnvs[i,nMajor+nMinor] > 5) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+2
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'high_amp')
-    } else if (cnvs[i,nMajor+nMinor] > 2) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'dup')
-    } else if (cnvs[i,nMajor+nMinor] < 2) {
-      cnvs$rank_score[i]=cnvs$rank_score[i]+1
-      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
-    }
-  }
-  
-  ascat_cnv=cnvs[order(rank_score,decreasing = T)]
-  if (write_tables) fwrite(ascat_cnv,file=paste0(sampleData$name,'_ascat_cnv.csv'))
-
-  tableWrapper(ascat_cnv)
-}
-```
-
-
-
-### View ControlFreec
-
-#### Genome view
-<!-- Plot Control Freec tumor copy number log ratio, tBAF and nBAF -->
-```{r plot_control_freec,fig.width=15,fig.height=7}
-if (project=='BTB') if (exists('tratio')) for (sample in unique(tratio$sample)) {
-  cat('Control Freec: ',sample)
-  par(mai=c(0,4,0,2))
-  temp <- tratio[sample]
-  temp$Ratio[temp$Ratio>3]=3
-  
-  g=ggplot()+ylab('B allele ratio and Coverage Ratio')+xlab(sample)+
-    scale_color_gradientn(colours = c('violet','blue','black','orange','red'))+
-    expand_limits(x=c(0,3200e6))+
-    scale_y_continuous(limits=c(-1,3),
-                       breaks = 0:2,
-                       minor_breaks = seq(0,2.5,0.5),
-                       labels = 0:2
-    )
-  # normal logR below
-  g=g+geom_point(aes(x=cumstart,y=Ratio-0.3),col='darkgrey',data=nratio,alpha=1/5,shape='.')
-  # tumor logR
-  g=g+geom_point(aes(x=cumstart,y=Ratio,col=CopyNumber),data=temp,alpha=1/5,shape='.')
-  # add smoothed
-  #g=g+geom_line(aes(x=cumpos,y=tratio),stat="identity",colour="green",size=0.05,data=binned[sample])
-  
-  g=g+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            axis.title.x=element_blank(),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank())
-  # add tBAF  <--- downsampled by 10
-  g=g+geom_point(data = tbaf[seq(1,nrow(tbaf),10)][sample],aes(x=cumstart,y=-0.5+0.5*BAF),
-                 alpha=1/10,shape='.')
-  # add nBAF  <--- downsampled by 10
-  g=g+geom_point(data = nbaf[seq(1,nrow(nbaf),10)],aes(x=cumstart,y=-1+0.5*BAF),
-                 alpha=1/10,shape='.')
-  # add chromosome lines
-  g=g+geom_segment(mapping = aes(x = starts,xend=starts,y= -1,yend=3),data=chrsz,inherit.aes = F,alpha=1/5)
-  # add chromosome labels
-  g=g+geom_text(aes(x=starts+0.5*length,y=0.1,label=label),data = chrsz,inherit.aes = F)
-  
-  print(g)
-}
-```
-
-&nbsp;
-
-#### Scatter plot
-<!-- Scatter plot -->
-```{r scatter_plot_control_freec, echo=FALSE,fig.width=15,fig.height=8,warning=F}
-if (exists('binned')) for (sample in unique(binned$sample)) {
-  cat('Control Freec: ',sample)
-  binned$tmaf[binned$tmaf<0]=1
-  g=ggplot()+expand_limits(y=c(.5,1))+expand_limits(x=c(.3,3))+
-    geom_point(aes(x = tratio,y = tmaf,col=chr),data=binned[sample][tratio<3])+
-    xlab('Tumor (1Mb mean) DNA ratio')+ylab('Tumor (1Mb mean) major allele ratio')+
-    scale_y_continuous(breaks = seq(0.5,1,0.1)) +
-    scale_x_continuous(breaks = seq(0.5,2.5,0.1))+
-    theme(panel.grid.minor.x = element_blank(),
-          panel.grid.major.x = element_line(colour="grey", size=0.2),
-          panel.grid.major.y = element_line(colour="grey", size=0.2),
-          panel.grid.minor.y = element_blank()
-    )
-  print(g)
-}
-```
-
-
-
-### View Ascat {.active}
-
-#### Genome view
-<!-- Plot ASCAT tumor copy number log ratio, tBAF and nBAF -->
-```{r plot_ascat,fig.width=15,fig.height=7}
-if (exists('ascat_tratio')) for (sample in unique(ascat_tratio$sample)) {
-  cat('ASCAT: ',sample)
-  par(mai=c(0,4,0,2))
-  temp <- ascat_tratio[sample]
-  temp$smoothed[temp$smoothed>3]=3
-  g=ggplot()+ylab('B allele ratio and Coverage Ratio')+
-    scale_color_gradientn(colours = c('violet','blue','black','orange','red'))+
-    scale_y_continuous(limits=c(-1,3),
-                       breaks = 0:2,
-                       minor_breaks = seq(0,2.5,0.5),
-                       labels = 0:2
-    )+
-    expand_limits(x=c(0,3200e6))
-  # using smoothed logR   <--- downsampled by 10
-  g=g+geom_point(aes(x=cumstart,y=smoothed,color=CopyNumber),data=temp[c(1,seq(2,nrow(temp),10))],alpha=1/5,shape='.')
-  # add MB-smoothed
-  #g=g+geom_line(aes(x=cumpos,y=tratio),stat="identity",colour="green",size=0.05,data=ascat_binned[sample])
-  
-  g=g+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            axis.title.x=element_blank(),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank())
-  # add tBAF  <--- downsampled by 10
-  g=g+geom_point(mapping = aes(x=cumstart,y=-0.5+0.5*BAF),data = ascat_tbaf[seq(1,nrow(ascat_tbaf),10)][sample],
-                 alpha=1/10,shape='.')
-  # add nBAF  <--- downsampled by 10
-  g=g+geom_point(mapping = aes(x=cumstart,y=-1+0.5*BAF),data = ascat_nbaf[seq(1,nrow(ascat_nbaf),10)],
-                 alpha=1/10,shape='.')
-  # add chromosome lines
-  g=g+geom_segment(mapping = aes(x = starts,xend=starts,y= -1,yend=3),data=chrsz,inherit.aes = F,alpha=1/5)
-  # add chromosome labels
-  g=g+geom_text(aes(x=starts+0.5*length,y=0.1,label=label),data = chrsz,inherit.aes = F)
-  
-  print(g)
-}
-```
-
-&nbsp;
-
-#### Scatter plot
-<!-- Scatter plot -->
-```{r scatter_plot_ascat, echo=FALSE,fig.width=15,fig.height=8,warning=F}
-if (exists('ascat_binned')) for (sample in unique(ascat_binned$sample)) {
-  cat('ASCAT: ',sample)
-  g=ggplot()+expand_limits(y=c(.5,1))+expand_limits(x=c(.3,3))+
-    geom_point(aes(x = tratio,y = tmaf,col=chr),data=ascat_binned[sample][tratio<3])+
-    xlab('Tumor (1Mb mean) DNA ratio')+ylab('Tumor (1Mb mean) major allele ratio')+
-    scale_y_continuous(breaks = seq(0.5,1,0.1)) +
-    scale_x_continuous(breaks = seq(0.5,2.5,0.1))+
-    theme(panel.grid.minor.x = element_blank(),
-          panel.grid.major.x = element_line(colour="grey", size=0.2),
-          panel.grid.major.y = element_line(colour="grey", size=0.2),
-          panel.grid.minor.y = element_blank()
-    )
-  print(g)
-}
-```
-
+#<!-- Read Control Freec copy number data -->
+#```{r load_control_freec}
+#cnvs=NULL
+#freec_cnv=NULL
+#samplename=NULL
+#if (project=='BTB') if (!is.na(freec_Tratio_file[1])) {
+#  # extract sample names
+#  for (s in 1:length(freec_Tratio_file)) samplename[s]=strsplit(basename(freec_Tratio_file[s]),'[.]')[[1]][1]
+#  
+#  tratio=NULL; tbaf=NULL
+#  for (s in 1:length(freec_Tratio_file)) {
+#    # tumor log ratio
+#    temp <- fread(file = freec_Tratio_file[s])
+#    temp$sample=samplename[s]
+#    temp=temp[,c(10,1:6)]
+#    temp$CopyNumber[1:2] <- c(0,4) # to secure range of colors
+#    tratio=rbind(tratio,temp)
+#    setkey(tratio,'sample')
+#    
+#    # tumor BAF
+#    temp <- fread(freec_Tbaf_file[s])[,1:3]
+#    temp$sample=samplename[s]
+#    temp=temp[,c(4,1:3)]
+#    tbaf=rbind(tbaf,temp)
+#    setkey(tbaf,'sample')
+#  }
+#  # normal log ratio
+#  nratio <- fread(file = freec_Nratio_file)[,1:6]
+#  # normal BAF
+#  nbaf <- fread(freec_Nbaf_file)[,1:3]
+#
+#  # manipulate for plot:
+#  tratio$cumstart <- tratio$Start
+#  nratio$cumstart <- nratio$Start
+#  tbaf$cumstart <- tbaf$Position
+#  nbaf$cumstart <- nbaf$Position
+#  tempchr=substr(chrsz$chr,4,6)
+#  for (i in 2:nrow(chrsz)) {
+#    ix <- tratio$Chromosome==tempchr[i]
+#    tratio$cumstart[ix] <- tratio$Start[ix]+chrsz$starts[i]
+#    ix <- nratio$Chromosome==tempchr[i]
+#    nratio$cumstart[ix] <- nratio$Start[ix]+chrsz$starts[i]
+#    ix <- tbaf$Chromosome==tempchr[i]
+#    tbaf$cumstart[ix] <- tbaf$Position[ix]+chrsz$starts[i]
+#    ix <- nbaf$Chromosome==tempchr[i]
+#    nbaf$cumstart[ix] <- nbaf$Position[ix]+chrsz$starts[i]
+#  }
+#  
+#  # modify for plot
+#  tratio$CopyNumber[tratio$CopyNumber>4] <- 4
+#  nratio$CopyNumber[nratio$CopyNumber>4] <- 4
+#  tratio$BAF[tratio$BAF<0.5 | tratio$BAF>1] <- NA
+#  nratio$BAF[nratio$BAF<0.5 | nratio$BAF>1] <- NA
+#  tratio$Chromosome=paste0('chr',tratio$Chromosome)
+#  nratio$Chromosome=paste0('chr',nratio$Chromosome)
+#  tbaf$Chromosome=paste0('chr',tbaf$Chromosome)
+#  nbaf$Chromosome=paste0('chr',nbaf$Chromosome)
+#  
+#  # smooth data for plot
+#  binned <- NULL
+#  for (sample in samplename) for (i in 1:nrow(chrsz)) {
+#    temp <- data.table(
+#      sample,
+#      chr=chrsz$chr[i],
+#      pos=seq(5e5,chrsz$length[i],5e5),
+#      cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
+#      tratio=NA,
+#      tmaf=NA)
+#    ctratio <- tratio[sample][Chromosome==chrsz$chr[i]]
+#    for (j in 1:nrow(temp)) {
+#      ix <- ctratio$Start>temp$pos[j]-5e5 & ctratio$Start<temp$pos[j]+5e5
+#      if (sum(ix)>20) {
+#        d <- density(ctratio$Ratio[ix],na.rm=T)
+#        temp$tratio[j] <- d$x[which.max(d$y)]
+#        t=ctratio$BAF[ix]
+#        t=t[!is.na(t)]
+#        if (length(t)>10) {
+#          d <- density(ctratio$BAF[ix],na.rm=T)
+#          temp$tmaf[j] <- d$x[which.max(d$y)]
+#        }
+#      }
+#    }
+#    binned <- rbind(binned,temp)
+#  }
+#  setkey(binned,'sample')
+#  
+#
+#  # check which regions are worth reporting
+#  # cnv file
+#  cnvs=NULL
+#  for (s in 1:length(samplename)) {
+#    temp <- as.data.table(read.csv(freec_cnv_file[s],sep='\t',header=F))[,1:8]
+#    names(temp) <- c('chr','start','end','copies','effect','genotype','value','type')
+#    temp$sample=samplename[s]
+#    temp=temp[,c(9,1:8)]
+#    cnvs=rbind(cnvs,temp)
+#    setkey(cnvs,'sample')
+#  }
+#  freec_loh=cnvs[grep('^A*$',genotype)][type=='somatic'][copies<4]
+#  freec_loh$chr=paste0('chr',freec_loh$chr)
+#  cnvs=cnvs[effect!='neutral'] # this removes LOH from CNV table
+#  cnvs$length=paste0(round((cnvs$end-cnvs$start)/1e6,2),'M')
+#  cnvs$rank_score <- 0
+#  cnvs$rank_terms <- ''
+#  cnvs$cancer_genes <- ''
+#  
+#  for (i in cnvs[end-start < 50e6, .I]) {
+#    genes=tumorgenes[chr==paste0('chr',cnvs$chr[i]) & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
+#    if (length(genes)>0) { # if any of our cancer genes
+#      cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
+#      if (any(genes %in% alltier1,na.rm = T)) {
+#        cnvs$rank_score[i]=2
+#        cnvs$rank_terms[i]='T1_gene'
+#      } else if (any(genes %in% alltier2,na.rm = T)) {
+#        cnvs$rank_score[i]=2
+#        cnvs$rank_terms[i]='T2_gene'
+#      }
+#    }
+#    
+#    # if the effect is focal
+#    if (cnvs[i,end-start]<3e6) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
+#    }
+#    
+#    # if the effect is loss/gain/amp etc
+#    if (cnvs$copies[i]==0) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'hz_loss')
+#    } else if (cnvs$copies[i] > 5) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'high_amp')
+#    } else if (cnvs$copies[i] > 2) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'dup')
+#    } else if (cnvs$effect[i] =='loss') {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
+#    }
+#  }
+#  
+#  freec_cnv=cnvs[order(rank_score,decreasing = T)] # order by rank
+#  if (write_tables) fwrite(freec_cnv,file=paste0(sampleData$name,'_freec_cnv.csv')) # write to file
+#  
+#  tableWrapper(freec_cnv) # table in report
+#}
+#```
+#
+#### Ascat
+#<!-- Read ASCAT copy number data -->
+#```{r load_ascat}
+#
+#ascat_cnv=NULL
+#samplename=NULL
+#if (length(ascat_Tratio_file)>0) {
+#  # extract sample names
+#  for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
+#  
+#  ascat_tratio=NULL; ascat_tbaf=NULL; ascat_cnv=NULL
+#  for (s in 1:length(samplename)) {
+#    # segmented copy number
+#    temp=fread(file = ascat_segment_file[s])
+#    temp$sample=samplename[s]
+#    temp=temp[,c(6,1:5)]
+#    temp$chr=paste0('chr',temp$chr)
+#    ascat_cnv=rbind(ascat_cnv,temp)
+#    setkey(ascat_cnv,'sample')
+#    these_cnvs=temp # for use below
+#    # tumor log ratio
+#    temp=fread(file = ascat_Tratio_file[s])[,-1]
+#    #if (project=='AML') temp$Chr=paste0('chr',temp) 
+#    colnames(temp)[3]='LogR'
+#    temp$sample=samplename[s]
+#    temp=temp[order(Chr,Position),c(4,1:3)]
+#    temp$Ratio=2^temp$LogR
+#    temp$smoothed=runmed(x = temp$Ratio,k = 99)
+#    temp$CopyNumber=2
+#    temp$MinorCopy=1
+#    for (i in 1:nrow(these_cnvs)) {
+#      ix=temp$Chr==these_cnvs$chr[i] & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
+#      if (!any(ix)) 
+#        ix=temp$Chr==substr(these_cnvs$chr[i],4,6) & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
+#      temp$CopyNumber[ix]=these_cnvs$nMajor[i]+these_cnvs$nMinor[i]
+#      temp$MinorCopy[ix]=these_cnvs$nMinor[i]
+#    }
+#    temp$CopyNumber[temp$CopyNumber>4]=4
+#    temp$CopyNumber[1:2]=c(0,4)
+#    ascat_tratio=rbind(ascat_tratio,temp)
+#    setkey(ascat_tratio,'sample')
+#    # tumor BAF
+#    temp=fread(ascat_Tbaf_file[s])[,-1]
+#    colnames(temp)[3]='BAF'
+#    temp=temp[which(BAF!=0 & BAF!=1)]
+#    temp$sample=samplename[s]
+#    temp=temp[order(Chr,Position),c(4,1:3)]
+#    ascat_tbaf=rbind(ascat_tbaf,temp)
+#    setkey(ascat_tbaf,'sample')
+#  }
+#  # normal BAF
+#  ascat_nbaf=fread(ascat_Nbaf_file)[,-1]
+#  colnames(ascat_nbaf)[3]='BAF'
+#  ascat_nbaf=ascat_nbaf[which(BAF!=0 & BAF!=1)]
+#
+#  # join (T) log ratio and (T) BAF
+#  #ascat_tratio=merge(ascat_tratio,ascat_tbaf,all.x=T)
+#  #ascat_tratio=merge(ascat_tratio,ascat_nbaf,all.x=T)
+#  
+#  # manipulate for plot:
+#  ascat_tratio$cumstart=ascat_tratio$Position
+#  ascat_tbaf$cumstart=ascat_tbaf$Position
+#  ascat_nbaf$cumstart=ascat_nbaf$Position
+#  #ascat_cnv$LOH=''; ascat_cnv$LOH[ascat_cnv$nMinor==0]='LOH' <---- will use ascat_LOH instead
+#  for (i in 2:nrow(chrsz)) {
+#    ix=ascat_tratio$Chr==chrsz$chr[i]
+#    ascat_tratio$cumstart[ix]=ascat_tratio$Position[ix]+chrsz$starts[i]
+#    #no n...
+#    ix=ascat_tbaf$Chr==chrsz$chr[i]
+#    ascat_tbaf$cumstart[ix]=ascat_tbaf$Position[ix]+chrsz$starts[i]
+#    ix=ascat_nbaf$Chr==chrsz$chr[i]
+#    ascat_nbaf$cumstart[ix]=ascat_nbaf$Position[ix]+chrsz$starts[i]
+#  }
+# 
+#
+#  
+#  # smooth data for view
+#  ascat_binned=NULL
+#  for (sample in samplename) for (i in 1:nrow(chrsz)) {
+#    temp=data.table(
+#      sample,
+#      chr=chrsz$chr[i],
+#      pos=seq(5e5,chrsz$length[i],5e5),
+#      cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
+#      tratio=NA,
+#      tmaf=NA)
+#    
+#    tempLogR=ascat_tratio[sample][Chr==chrsz$chr[i]]
+#    tempBAF=ascat_tbaf[sample][Chr==chrsz$chr[i]]
+#    tempBAF$BAF=0.5+abs(tempBAF$BAF-0.5)
+#    for (j in 1:nrow(temp)) {
+#      ix = tempLogR$Position>temp$pos[j]-5e5 & tempLogR$Position<temp$pos[j]+5e5
+#      if (sum(ix)>10) {
+#        d <- density(2^tempLogR$LogR[ix],na.rm=T)
+#        temp$tratio[j] <- d$x[which.max(d$y)]
+#      }
+#      ix = tempBAF$Position>temp$pos[j]-5e5 & tempBAF$Position<temp$pos[j]+5e5
+#      if (sum(!is.na(tempBAF$BAF[ix]))>20) {
+#        d=density(tempBAF$BAF[ix],na.rm=T)
+#        temp$tmaf[j]=d$x[which.max(d$y)]
+#      }
+#    }
+#    ascat_binned=rbind(ascat_binned,temp)
+#  }
+#  setkey(ascat_binned,'sample')
+#
+#  
+#  ascat_loh=ascat_cnv[nMinor==0 & nMajor<4]
+#  ascat_loh$chr=paste0('chr',ascat_loh$chr)
+#  if (!exists('freec_loh')) freec_loh=ascat_loh # to make sure LOH is available if theres no freec
+#  colnames(ascat_loh)[3:4]=c('start','end')
+#  cnvs=ascat_cnv[nMajor+nMinor != 2] # this removes cnLOH
+#  cnvs$length=paste0(round((cnvs$endpos-cnvs$startpos)/1e6,2),'M')
+#  cnvs$rank_score <- 0
+#  cnvs$rank_terms <- ''
+#  cnvs$cancer_genes <- ''
+#  
+#  for (i in which(cnvs$endpos-cnvs$startpos < 50e6)) {
+#    genes=tumorgenes[chr==cnvs$chr[i] & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
+#    if (length(genes)>0) { # if any of our cancer genes
+#      cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
+#      if (any(genes %in% alltier1,na.rm = T)) {
+#        cnvs$rank_score[i]=2
+#        cnvs$rank_terms[i]='T1_gene'
+#      } else if (any(genes %in% alltier2,na.rm = T)) {
+#        cnvs$rank_score[i]=2
+#        cnvs$rank_terms[i]='T2_gene'
+#      }
+#    }
+#    
+#    # if the effect is focal
+#    if (cnvs[i,endpos-startpos]<3e6) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
+#    }
+#    
+#    
+#    
+#    # if the effect is loss/gain/amp etc
+#    if (cnvs[i,nMajor+nMinor]==0) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'hz_loss')
+#    } else if (cnvs[i,nMajor+nMinor] > 5) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'high_amp')
+#    } else if (cnvs[i,nMajor+nMinor] > 2) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'dup')
+#    } else if (cnvs[i,nMajor+nMinor] < 2) {
+#      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+#      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
+#    }
+#  }
+#  
+#  ascat_cnv=cnvs[order(rank_score,decreasing = T)]
+#  if (write_tables) fwrite(ascat_cnv,file=paste0(sampleData$name,'_ascat_cnv.csv'))
+#
+#  tableWrapper(ascat_cnv)
+#}
+#```
+#
+#
+#
+#### View ControlFreec
+#
+##### Genome view
+#<!-- Plot Control Freec tumor copy number log ratio, tBAF and nBAF -->
+#```{r plot_control_freec,fig.width=15,fig.height=7}
+#if (project=='BTB') if (exists('tratio')) for (sample in unique(tratio$sample)) {
+#  cat('Control Freec: ',sample)
+#  par(mai=c(0,4,0,2))
+#  temp <- tratio[sample]
+#  temp$Ratio[temp$Ratio>3]=3
+#  
+#  g=ggplot()+ylab('B allele ratio and Coverage Ratio')+xlab(sample)+
+#    scale_color_gradientn(colours = c('violet','blue','black','orange','red'))+
+#    expand_limits(x=c(0,3200e6))+
+#    scale_y_continuous(limits=c(-1,3),
+#                       breaks = 0:2,
+#                       minor_breaks = seq(0,2.5,0.5),
+#                       labels = 0:2
+#    )
+#  # normal logR below
+#  g=g+geom_point(aes(x=cumstart,y=Ratio-0.3),col='darkgrey',data=nratio,alpha=1/5,shape='.')
+#  # tumor logR
+#  g=g+geom_point(aes(x=cumstart,y=Ratio,col=CopyNumber),data=temp,alpha=1/5,shape='.')
+#  # add smoothed
+#  #g=g+geom_line(aes(x=cumpos,y=tratio),stat="identity",colour="green",size=0.05,data=binned[sample])
+#  
+#  g=g+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#            axis.title.x=element_blank(),
+#            axis.text.x=element_blank(),
+#            axis.ticks.x=element_blank())
+#  # add tBAF  <--- downsampled by 10
+#  g=g+geom_point(data = tbaf[seq(1,nrow(tbaf),10)][sample],aes(x=cumstart,y=-0.5+0.5*BAF),
+#                 alpha=1/10,shape='.')
+#  # add nBAF  <--- downsampled by 10
+#  g=g+geom_point(data = nbaf[seq(1,nrow(nbaf),10)],aes(x=cumstart,y=-1+0.5*BAF),
+#                 alpha=1/10,shape='.')
+#  # add chromosome lines
+#  g=g+geom_segment(mapping = aes(x = starts,xend=starts,y= -1,yend=3),data=chrsz,inherit.aes = F,alpha=1/5)
+#  # add chromosome labels
+#  g=g+geom_text(aes(x=starts+0.5*length,y=0.1,label=label),data = chrsz,inherit.aes = F)
+#  
+#  print(g)
+#}
+#```
+#
+#&nbsp;
+#
+##### Scatter plot
+#<!-- Scatter plot -->
+#```{r scatter_plot_control_freec, echo=FALSE,fig.width=15,fig.height=8,warning=F}
+#if (exists('binned')) for (sample in unique(binned$sample)) {
+#  cat('Control Freec: ',sample)
+#  binned$tmaf[binned$tmaf<0]=1
+#  g=ggplot()+expand_limits(y=c(.5,1))+expand_limits(x=c(.3,3))+
+#    geom_point(aes(x = tratio,y = tmaf,col=chr),data=binned[sample][tratio<3])+
+#    xlab('Tumor (1Mb mean) DNA ratio')+ylab('Tumor (1Mb mean) major allele ratio')+
+#    scale_y_continuous(breaks = seq(0.5,1,0.1)) +
+#    scale_x_continuous(breaks = seq(0.5,2.5,0.1))+
+#    theme(panel.grid.minor.x = element_blank(),
+#          panel.grid.major.x = element_line(colour="grey", size=0.2),
+#          panel.grid.major.y = element_line(colour="grey", size=0.2),
+#          panel.grid.minor.y = element_blank()
+#    )
+#  print(g)
+#}
+#```
+#
+#
+#
+#### View Ascat {.active}
+#
+##### Genome view
+#<!-- Plot ASCAT tumor copy number log ratio, tBAF and nBAF -->
+#```{r plot_ascat,fig.width=15,fig.height=7}
+#if (exists('ascat_tratio')) for (sample in unique(ascat_tratio$sample)) {
+#  cat('ASCAT: ',sample)
+#  par(mai=c(0,4,0,2))
+#  temp <- ascat_tratio[sample]
+#  temp$smoothed[temp$smoothed>3]=3
+#  g=ggplot()+ylab('B allele ratio and Coverage Ratio')+
+#    scale_color_gradientn(colours = c('violet','blue','black','orange','red'))+
+#    scale_y_continuous(limits=c(-1,3),
+#                       breaks = 0:2,
+#                       minor_breaks = seq(0,2.5,0.5),
+#                       labels = 0:2
+#    )+
+#    expand_limits(x=c(0,3200e6))
+#  # using smoothed logR   <--- downsampled by 10
+#  g=g+geom_point(aes(x=cumstart,y=smoothed,color=CopyNumber),data=temp[c(1,seq(2,nrow(temp),10))],alpha=1/5,shape='.')
+#  # add MB-smoothed
+#  #g=g+geom_line(aes(x=cumpos,y=tratio),stat="identity",colour="green",size=0.05,data=ascat_binned[sample])
+#  
+#  g=g+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#            axis.title.x=element_blank(),
+#            axis.text.x=element_blank(),
+#            axis.ticks.x=element_blank())
+#  # add tBAF  <--- downsampled by 10
+#  g=g+geom_point(mapping = aes(x=cumstart,y=-0.5+0.5*BAF),data = ascat_tbaf[seq(1,nrow(ascat_tbaf),10)][sample],
+#                 alpha=1/10,shape='.')
+#  # add nBAF  <--- downsampled by 10
+#  g=g+geom_point(mapping = aes(x=cumstart,y=-1+0.5*BAF),data = ascat_nbaf[seq(1,nrow(ascat_nbaf),10)],
+#                 alpha=1/10,shape='.')
+#  # add chromosome lines
+#  g=g+geom_segment(mapping = aes(x = starts,xend=starts,y= -1,yend=3),data=chrsz,inherit.aes = F,alpha=1/5)
+#  # add chromosome labels
+#  g=g+geom_text(aes(x=starts+0.5*length,y=0.1,label=label),data = chrsz,inherit.aes = F)
+#  
+#  print(g)
+#}
+#```
+#
+#&nbsp;
+#
+##### Scatter plot
+#<!-- Scatter plot -->
+#```{r scatter_plot_ascat, echo=FALSE,fig.width=15,fig.height=8,warning=F}
+#if (exists('ascat_binned')) for (sample in unique(ascat_binned$sample)) {
+#  cat('ASCAT: ',sample)
+#  g=ggplot()+expand_limits(y=c(.5,1))+expand_limits(x=c(.3,3))+
+#    geom_point(aes(x = tratio,y = tmaf,col=chr),data=ascat_binned[sample][tratio<3])+
+#    xlab('Tumor (1Mb mean) DNA ratio')+ylab('Tumor (1Mb mean) major allele ratio')+
+#    scale_y_continuous(breaks = seq(0.5,1,0.1)) +
+#    scale_x_continuous(breaks = seq(0.5,2.5,0.1))+
+#    theme(panel.grid.minor.x = element_blank(),
+#          panel.grid.major.x = element_line(colour="grey", size=0.2),
+#          panel.grid.major.y = element_line(colour="grey", size=0.2),
+#          panel.grid.minor.y = element_blank()
+#    )
+#  print(g)
+#}
+#```
+#
 
 ## Structural variants {.tabset}
 
@@ -1458,7 +1474,7 @@ try( if (exists('manta_tumor_selected')) {
 
 
 
-## Somatic point mutations {.tabset .active}
+# Somatic point mutations {.tabset .active}
 
 ### Mutect 2
 <!-- Read annotated small variant data (Mutect 2) -->

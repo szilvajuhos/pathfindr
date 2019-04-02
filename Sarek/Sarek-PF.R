@@ -56,6 +56,7 @@ files <- dir(path=sample_dir,recursive = T,full.names = T)
 # TODO actually would be better to list only file that we are interested
 remove=unique(c(grep(pattern = '.png',x = files),
 	  grep(pattern = 'Annotation.old',x = files),
+    grep(pattern = 'Annotation/Manta/VEP.CADD',x = files),
 	  grep(pattern = '/work/',x = files)))
 if (length(remove)>0) files <- files[-remove]
 
@@ -1000,8 +1001,11 @@ loadMantaTumor <- function(manta_tumor_file) {
 			setcolorder(x = selection,neworder = c(firstcols,cols[!cols %in% firstcols]))
 			
 			manta_tumor_selected <- selection[order(Feature_ID)][order(rank_score,decreasing = T)]
+			write("Selected Manta SVs:",stderr())
+			write(typeof(manta_tumor_selected),stderr())
+			write(str(head(manta_tumor_selected)),stderr())
       outfile <- paste0(sampleData$name,'_manta_tumor.csv')
-      fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
+      #fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
       write(paste0(" *** Manta results written to ",outfile),stdout())
 			#tableWrapper(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1])
 		} 
@@ -1905,7 +1909,7 @@ freec_cnv_file <- files[grep(pattern = "^.*[TR]\\.hg38\\.pileup\\.gz_CNVs$",file
 
 write("ControlFREEC files:",stdout())
 printList( list(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file) )
-loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
+#loadControlFREEC(freec_Tratio_file,freec_Nratio_file, freec_Tbaf_file, freec_Nbaf_file, freec_info_file, freec_cnv_file)
 toc()
 
 tic("ASCAT")
@@ -1926,8 +1930,8 @@ tic("Manta")
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
 write("x                                             Manta                                                             x",stderr());
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
-manta_tumor_file <- grep(pattern = ".*Manta_.*vs.*somaticSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)
-manta_normal_file <- grep(pattern = ".*Manta_.*vs.*diploidSV.vcf.snpEff.ann.vep.ann.vcf$",files,value = T)[1]
+manta_tumor_file <- grep(pattern = ".*VEP\\.CADD.*Manta_.*vs.*somaticSV.*ann.vcf$",files,value = T)
+manta_normal_file <- grep(pattern = ".*VEP\\.CADD.*Manta_.*vs.*diploidSV.*ann.vcf$",files,value = T)[1]
 cosmic_fusions = fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
 swegen_manta_all=fread(paste0(ref_data,'swegen_sv_counts.csv'),key='name')
 write("Files for Manta structural variants: ", stdout())
@@ -1942,7 +1946,7 @@ for (i in 1:length(allfusion)) {
 		for (j in 1:length(t))
  		allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
 }
-#loadMantaTumor(manta_tumor_file)
+loadMantaTumor(manta_tumor_file)
 #loadMantaNormal(manta_normal_file)
 toc()
 
