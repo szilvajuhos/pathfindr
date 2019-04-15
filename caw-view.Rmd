@@ -1122,7 +1122,7 @@ if (!is.null(manta_tumor_table)) if (nrow(manta_tumor_table)>0) {
     setcolorder(x = selection,neworder = c(firstcols,cols[!cols %in% firstcols]))
     
     manta_tumor_selected <- selection[order(Feature_ID)][order(rank_score,decreasing = T)]
-    if (write_tables) fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=paste0(sampleData$name,'_manta_tumor.csv'))
+    if (write_tables) fwrite(manta_tumor_selected[,-c('ANN','Gene_ID','CSQ')][rank_score>1],file=paste0(sampleData$name,'_manta_tumor.csv'))
     tableWrapper(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1])
   } 
 }
