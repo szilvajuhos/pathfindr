@@ -1003,9 +1003,9 @@ loadMantaTumor <- function(manta_tumor_file) {
 			manta_tumor_selected <- selection[order(Feature_ID)][order(rank_score,decreasing = T)]
 			write("Selected Manta SVs:",stderr())
 			write(typeof(manta_tumor_selected),stderr())
-			write(str(head(manta_tumor_selected)),stderr())
+			#write(str(head(manta_tumor_selected)),stderr())
       outfile <- paste0(sampleData$name,'_manta_tumor.csv')
-      #fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
+      fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
       write(paste0(" *** Manta results written to ",outfile),stdout())
 			#tableWrapper(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1])
 		} 
