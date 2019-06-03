@@ -24,6 +24,7 @@ if (is.null(opt$reference)) {
 }
 
 
+
 # we are using tictoc to benchmark runtimes all over the code
 library(tictoc)
 tic("Pathfindr")
@@ -38,9 +39,11 @@ printList(list('Sample:',basename(getwd()),'Directory:',getwd(),'Date:',date()))
 
 # reference is a command-line parameter
 ref_data <- opt$reference
+#ref_data <- "reference_data/"
 write(paste("Reference directory: ",ref_data),stdout())
 
 sample_dir <- opt$sample
+#sample_dir <- "../TEST"
 write(paste("Sample dir: ",sample_dir),stdout())
 
 # we do want to print out tables
@@ -741,7 +744,7 @@ loadMantaNormal <-function(manta_normal) {
       
       manta_normal_selected <- selection[order(Feature_ID)][order(rank_score,decreasing = T)]
       outfile <- paste0(sampleData$name,'_manta_normal.csv')
-      fwrite(manta_normal_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
+      #fwrite(manta_normal_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
       write(paste0(" *** Manta normal features written to ",outfile),stdout())
       #tableWrapper(manta_normal_selected[,-c('ANN','Gene_ID')][rank_score>1])
     } 
@@ -753,6 +756,8 @@ loadMantaTumor <- function(manta_tumor_file) {
 
 	# get SweGen AFs: TODO make it optional
 	swegen_manta_all=fread(paste0(ref_data,'swegen_sv_counts.csv'),key='name')
+	write("swegen_manta_all",stderr())
+	write(str(length(swegen_manta_all)),stderr())
 	# first collect PASS ids from all samples
 	allpass=NULL
 	if (length(manta_tumor_file)>0) for (s in 1:length(manta_tumor_file)) {
@@ -1005,7 +1010,16 @@ loadMantaTumor <- function(manta_tumor_file) {
 			write(typeof(manta_tumor_selected),stderr())
 			#write(str(head(manta_tumor_selected)),stderr())
       outfile <- paste0(sampleData$name,'_manta_tumor.csv')
-      fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
+			# exclude ANN and Gene_ID
+			manta_tumor_selected_ranked <- subset(manta_tumor_selected[,-c('ANN','Gene_ID')], rank_score > 1)
+			#manta_tumor_selected_ranked <- subset(manta_tumor_selected, rank_score > 1)
+			#View(head(manta_tumor_selected_ranked))
+			#a <- readLines("stdin",n=1);
+			
+      write(paste0(" Writing to ",outfile),stdout())
+			#write.table(manta_tumor_selected_ranked,file=outfile,quote=TRUE,sep=",",na="NA")
+    	write.csv(manta_tumor_selected_ranked,file=outfile,na="")
+      #fwrite(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1],file=outfile)
       write(paste0(" *** Manta results written to ",outfile),stdout())
 			#tableWrapper(manta_tumor_selected[,-c('ANN','Gene_ID')][rank_score>1])
 		} 
@@ -1935,7 +1949,9 @@ manta_normal_file <- grep(pattern = ".*VEP\\.CADD.*Manta_.*vs.*diploidSV.*ann.vc
 cosmic_fusions = fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
 swegen_manta_all=fread(paste0(ref_data,'swegen_sv_counts.csv'),key='name')
 write("Files for Manta structural variants: ", stdout())
-printList( list(manta_tumor_file,manta_normal_file) )
+write(paste("manta_tumor_file: ",manta_tumor_file), stdout())
+write(paste("manta_normal_file: ",manta_normal_file), stdout())
+#printList( list(manta_tumor_file,manta_normal_file) )
 # TODO: sort it out to be local or a general on-demand object
 allfusionpairs=NULL
 allfusion=tumorgenes[grep('fusion',`Role in Cancer`),`Gene Symbol`]
@@ -1946,11 +1962,8 @@ for (i in 1:length(allfusion)) {
 		for (j in 1:length(t))
  		allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
 }
-loadMantaTumor(manta_tumor_file)
-#loadMantaNormal(manta_normal_file)
 toc()
 
-q()
 tic("Database read")
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
 write("x                                     Reading databases for SNV and small indel prioritisation                  x",stderr());
@@ -1958,8 +1971,10 @@ write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # These are also needed for Strelka
 write("Reading SweGen SNP counts ...",stdout())
 snptable         = fread(paste0(ref_data,'swegen_snp_counts.csv'),key='name')
+write(paste("snptable",str(length(snptable))),stdout())
 write("Reading COSMIC tables ...",stdout())
 cosmic_coding    = fread(paste0(ref_data,'cosmic_coding_table.csv'),key = 'name')
+write(paste("COSMIC tables:",str(length(cosmic_coding))),stdout())
 cosmic_noncoding = fread(paste0(ref_data,'cosmic_noncoding_table.csv'),key = 'name')
 cosmic_fusions   = fread(paste0(ref_data,'cosmic_fusions_table.csv'),key = 'name')
 alltsg = tumorgenes[grep('TSG',`Role in Cancer`),`Gene Symbol`]
@@ -1983,6 +1998,13 @@ for (i in 1:nrow(hotspots_snv))
                   )
 
 toc()
+
+
+write("Starting Manta tumor processing",stdout())
+loadMantaTumor(manta_tumor_file)
+#loadMantaNormal(manta_normal_file)
+
+q()
 tic("Mutect2")
 write("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",stderr());
 write("x                                             Mutect2 with GATK 3.8                                             x",stderr());
