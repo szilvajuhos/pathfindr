@@ -1,0 +1,407 @@
+---
+  output: 
+  html_document:
+  toc: false
+toc_float: false
+toc_depth: 4
+code_folding: NULL
+df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+  
+  <!-- This script reads from a folder containing (VEP+snpEff) annotated CAW (aka Sarek) output, including copy number from ControlFreec and Ascat, structural variation from Manta, somatic point mutations from Mutact 2 and Strelka, and germline mutations from HaplotypeCaller.-->
+  
+  <!-- CSS style for left alignment and for tables to look ok: -->
+  <style>
+  body {
+    position: absolute;
+    left: 42px;}
+.main-container {max-width: none !important;}
+table, td, th {
+  font-size: 11px;
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 100%;
+  word-wrap: break-word;
+  max-width: 240px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+  
+  <!-- Markdown setup -->
+  ```{r setup, include=F}
+knitr::opts_chunk$set(echo = FALSE,comment = '',warning=F,error = F)
+options(width = 600)
+```
+
+# {.tabset .tabset-pills}
+
+```{r project_and_refgenome}
+cat('Sample:',basename(getwd()),'\tDirectory:',getwd(),'\nDate:',date())
+
+## Project and reference genome
+
+project='BTB'
+reference_genome='GRCh38'
+```
+## Setup {.tabset}
+
+### List files {.active}
+
+<!-- First, make a list of files to read and visualize -->
+```{r list_files}
+
+
+if (project == 'BTB') {
+  csv_dir='~/tables'
+  files <- dir(recursive = T,full.names = T)
+
+  remove=unique(c(grep(pattern = '.png',x = files),
+                  #grep(pattern = 'ControlFreec',x = files),
+                  grep(pattern = 'Annotation.old',x = files),
+                  grep(pattern = '/work/',x = files),
+                  grep(pattern = 'VEP.CADD/Manta',x = files),
+                  grep(pattern = 'VEP/haplo',x = files),
+                  grep(pattern = 'VEP/mute',x = files),
+                  grep(pattern = 'VEP/Strelk',x = files),
+                  grep(pattern = 'old.ControlFreec',x = files),
+                  grep(pattern = 'old.BTB_ControlFreec',x = files)
+                ))
+  
+  if (length(remove)>0) files <- files[-remove]
+  
+  # control freec files ignored
+  # Ascat files
+  ascat_Tratio_file <- files[grep(pattern = "^.*Ascat.*[TR2]\\.LogR$",files)]
+  ascat_Nratio_file <- files[grep(pattern = "^.*Ascat.*[BN1]\\.LogR$",files)][1]
+  ascat_Tbaf_file <- files[grep(pattern = "^.*Ascat.*[TR2]\\.BAF$",files)]
+  ascat_Nbaf_file <- files[grep(pattern = "^.*Ascat.*[BN1]\\.BAF$",files)][1]
+  ascat_segment_file <- files[grep(pattern = "^.*Ascat.*[TR2]\\.cnvs\\.txt$",files)]
+  
+  # Furthermore, these are ignored also:
+  # Manta structural variant files
+  # Haplotype caller variant files
+  # snpEff+VEP Mutect2 files are
+  # snpEff + VEP Strelka snv file
+  # snpEff + VEP Strelka indel file
+}
+
+
+if (exists('files')) rm(files)
+{
+  cat('Selected files in',getwd(),'\n\n')
+  for ( obj in ls() ) { 
+    cat('---',obj,'---\n') 
+    print(get(obj)) 
+  }
+}  
+
+
+```
+### Load dependencies
+<!-- Dependencies -->
+```{r load_dependencies}
+library(data.table)
+library(ggplot2); theme_set(theme_light())
+library(grid)
+library(dplyr)
+library(ggrepel)
+library(VariantAnnotation)
+library(VennDiagram)
+library(knitr)
+library(htmlTable)
+library(kableExtra)
+library(stringr)
+
+makelinks <- function(strings,sep='&') {
+  if (length(strings)>0) for (i in 1:length(strings)) if (strings[i]!='') {
+    t=strsplit(strings[i],sep)[[1]]
+    for (j in 1:length(t)) {
+      if (t[j] %in% alltumorgenes) {
+        t[j]=cell_spec(t[j], link = paste0("https://cancer.sanger.ac.uk/cosmic/gene/analysis?ln=",t[j]),format = 'html')
+      } else if (startsWith(t[j],'rs')) {
+        t[j]=cell_spec(t[j], link = paste0("https://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=",substr(t[j],3,100)),format = 'html')
+      } else if (startsWith(t[j],'COSM')) {
+        t[j]=cell_spec(t[j], link = paste0("https://cancer.sanger.ac.uk/cosmic/mutation/overview?id=",substr(t[j],5,100)),format = 'html')
+      }
+    }
+    strings[i]=paste(t,collapse = ' ')
+  }
+  return(strings)
+}
+
+tableWrapper <- function(table) {
+  if ('Existing_variation' %in% colnames(table)) {
+    table$Existing_variation=makelinks(table$Existing_variation)
+  }
+  if ('Gene_Name' %in% colnames(table)) {
+    table$Gene_Name[nchar(table$Gene_Name)>200]='many'
+  }
+  if ('SYMBOL' %in% colnames(table)) {
+    table$SYMBOL=makelinks(table$SYMBOL)
+  }
+  if ('cancer_genes' %in% colnames(table)) {
+    table$cancer_genes=makelinks(table$cancer_genes,sep=' ')
+  }
+  if ('AD_TUMOR' %in% colnames(table)) {
+    table$AD_TUMOR=unlist(lapply(table$AD_TUMOR,paste,collapse=', '))
+  }
+  if ('AD_NORMAL' %in% colnames(table)) {
+    table$AD_NORMAL=unlist(lapply(table$AD_NORMAL,paste,collapse=', '))
+  }
+  if ('AD' %in% colnames(table)) {
+    if (is.list(table$AD)) table$AD=unlist(lapply(table$AD,paste,collapse=', '))
+  }
+  
+  samples=sort(unique(table$sample))
+  
+  if (T) if (nrow(table)>0) htmlTable(table, 
+            col.rgroup = c("none", "#F7F7F7"),
+            tspanner=paste('Rank score:',unique(table$rank_score)),
+            n.tspanner=rev(table(table$rank_score)))
+}
+
+sampleData <- data.table(
+  date=date(),
+  directory=getwd(),
+  name=basename(getwd())
+)
+
+chrsz <- data.table(
+  chr = paste0('chr',c("1", "2", "3", "4", "5", "6", "7", "8", 
+          "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", 
+          "20", "21", "22", "X", "Y")), 
+  label = c("1", "2", "3", "4", "5", 
+          "6", "7", "8", "9", "10", "11", "12", "13", 
+          "14", "15", "16", "17", "18", "19", "20", 
+          "21", "22", "X", "Y"),
+  starts = c(0, 253902921, 500669562, 
+             703689723, 898025604, 1084280925, 1259870526, 1424144247, 1574191848, 
+             1717288929, 1855896810, 1995944331, 2134165212, 2253485013, 2363996694, 
+             2470839615, 2565902256, 2654091777, 2739309138, 2802869979, 2871941700, 
+             2923598421, 2979326382, 3140008743), 
+  length = c(248902921, 241766641, 
+             198020161, 189335881, 181255321, 170589601, 159273721, 145047601, 
+             138097081, 133607881, 135047521, 133220881, 114319801, 105511681, 
+             101842921, 90062641, 83189521, 80217361, 58560841, 64071721, 
+             46656721, 50727961, 155682361, 56827081)
+)
+```
+
+<!-- Reference data files -->
+```{r load_reference}
+#snptable=fread('~/reports/reference_data/swegen_snp_counts.csv',key='name')
+swegen_manta_all=fread('~/reports/reference_data/swegen_sv_counts.csv',key='name')
+tumorgenes=fread('~/reports/reference_data/cancer_gene_census.csv',key='Gene Symbol')
+tumorgenes$chr=paste0('chr',str_replace(string=tumorgenes$`Genome Location`,pattern = ':.*',replacement = ''))
+temp=str_replace(string=tumorgenes$`Genome Location`,pattern = '.*:',replacement = '')
+tumorgenes$start=as.numeric(str_replace(string=temp,pattern = '.*-',replacement = ''))
+tumorgenes$end=as.numeric(str_replace(string=temp,pattern = '-.*',replacement = ''))
+tumorgenes$cumstart=NA; tumorgenes$cumend=NA
+for (i in 1:nrow(chrsz)) {
+    ix <- tumorgenes$chr==chrsz$chr[i]
+    tumorgenes$cumstart[ix] <- tumorgenes$start[ix]+chrsz$starts[i]
+    tumorgenes$cumend[ix] <- tumorgenes$end[ix]+chrsz$starts[i]
+  }
+
+#if (project=='BTB') {
+local_tumorgenes=fread('~/reports/reference_data/2018_gene_list_tere_ref.csv',key='Gene')[Gene!='',1:2]
+alltumorgenes=unique(c(tumorgenes$`Gene Symbol`,local_tumorgenes$Gene))
+alltier1=union(tumorgenes[Tier==1,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==1,Gene])
+alltier2=union(tumorgenes[Tier==2,`Gene Symbol`],local_tumorgenes[`Tier 1 and 2 for pediatric cancers final`==2,Gene])
+
+allfusion=tumorgenes[grep('fusion',`Role in Cancer`),`Gene Symbol`]
+allfusionpairs=NULL
+for (i in 1:length(allfusion)) {
+  t=trimws(strsplit(tumorgenes[allfusion[i],`Translocation Partner`],', ')[[1]])
+  if (length(t)>0) for (j in 1:length(t))
+  allfusionpairs=c(allfusionpairs,paste(sort(c(allfusion[i],t[j])),collapse = ' '))
+}
+alltsg=tumorgenes[grep('TSG',`Role in Cancer`),`Gene Symbol`]
+hotspots_inframe=unique(fread('~/reports/reference_data/hotspots_v2_inframe.csv')[,.(Hugo_Symbol,Amino_Acid_Position)])
+hotspots_inframe$start=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '-[0-9]*',replacement = ''))
+hotspots_inframe$end=as.numeric(str_replace(string = hotspots_inframe$Amino_Acid_Position,pattern = '[0-9]*-',replacement = ''))
+hotspots_snv=unique(
+  fread('~/reports/reference_data/hotspots_v2_snv.csv')[,.(Hugo_Symbol,Amino_Acid_Position)])[-grep('splice',Amino_Acid_Position)]
+hotspots_snv$pos <- as.numeric(hotspots_snv$Amino_Acid_Position)
+near_hotspots=NULL
+for (i in 1:nrow(hotspots_inframe)) 
+  near_hotspots=c(near_hotspots,
+                      paste(hotspots_inframe$Hugo_Symbol[i],
+                                 c(seq(hotspots_inframe$start[i]-2,hotspots_inframe$start[i]+2),
+                                       hotspots_inframe$end[i]-2,hotspots_inframe$end[i]+2)))
+for (i in 1:nrow(hotspots_snv))
+  near_hotspots=c(near_hotspots,
+                      paste(hotspots_snv$Hugo_Symbol[i],
+                                 seq(hotspots_snv$pos[i]-2,hotspots_snv$pos[i]+2)))
+cosmic_coding=fread('~/reports/reference_data/cosmic_coding_table.csv',key = 'name')
+cosmic_noncoding=fread('~/reports/reference_data/cosmic_noncoding_table.csv',key = 'name')
+cosmic_fusions=fread('~/reports/reference_data/cosmic_fusions_table.csv',key = 'name')
+```
+### Ascat
+<!-- Read ASCAT copy number data -->
+```{r load_ascat}
+
+ascat_cnv=NULL
+samplename=NULL
+if (length(ascat_Tratio_file)>0) {
+  # extract sample names
+  for (s in 1:length(ascat_Tratio_file)) samplename[s]=strsplit(basename(ascat_Tratio_file[s]),'[.]')[[1]][1]
+  
+  ascat_tratio=NULL; ascat_tbaf=NULL; ascat_cnv=NULL
+  for (s in 1:length(samplename)) {
+    # segmented copy number
+    temp=fread(file = ascat_segment_file[s])
+    temp$sample=samplename[s]
+    temp=temp[,c(6,1:5)]
+    temp$chr=paste0('chr',temp$chr)
+    ascat_cnv=rbind(ascat_cnv,temp)
+    setkey(ascat_cnv,'sample')
+    these_cnvs=temp # for use below
+    # tumor log ratio
+    temp=fread(file = ascat_Tratio_file[s])[,-1]
+    #if (project=='AML') temp$Chr=paste0('chr',temp) 
+    colnames(temp)[3]='LogR'
+    temp$sample=samplename[s]
+    browser()
+    temp=temp[order(temp$Chr,temp$Position),c(4,1:3)]
+    temp$Ratio=2^temp$LogR
+    temp$smoothed=runmed(x = temp$Ratio,k = 99)
+    temp$CopyNumber=2
+    temp$MinorCopy=1
+    for (i in 1:nrow(these_cnvs)) {
+      ix=temp$Chr==these_cnvs$chr[i] & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
+      if (!any(ix)) 
+        ix=temp$Chr==substr(these_cnvs$chr[i],4,6) & temp$Position > these_cnvs$start[i] & temp$Position < these_cnvs$end[i]
+      temp$CopyNumber[ix]=these_cnvs$nMajor[i]+these_cnvs$nMinor[i]
+      temp$MinorCopy[ix]=these_cnvs$nMinor[i]
+    }
+    temp$CopyNumber[temp$CopyNumber>4]=4
+    temp$CopyNumber[1:2]=c(0,4)
+    ascat_tratio=rbind(ascat_tratio,temp)
+    setkey(ascat_tratio,'sample')
+    # tumor BAF
+    temp=fread(ascat_Tbaf_file[s])[,-1]
+    colnames(temp)[3]='BAF'
+    temp=temp[which(BAF!=0 & BAF!=1)]
+    temp$sample=samplename[s]
+    temp=temp[order(Chr,Position),c(4,1:3)]
+    ascat_tbaf=rbind(ascat_tbaf,temp)
+    setkey(ascat_tbaf,'sample')
+  }
+  # normal BAF
+  ascat_nbaf=fread(ascat_Nbaf_file)[,-1]
+  colnames(ascat_nbaf)[3]='BAF'
+  ascat_nbaf=ascat_nbaf[which(BAF!=0 & BAF!=1)]
+
+  # join (T) log ratio and (T) BAF
+  #ascat_tratio=merge(ascat_tratio,ascat_tbaf,all.x=T)
+  #ascat_tratio=merge(ascat_tratio,ascat_nbaf,all.x=T)
+  
+  # manipulate for plot:
+  ascat_tratio$cumstart=ascat_tratio$Position
+  ascat_tbaf$cumstart=ascat_tbaf$Position
+  ascat_nbaf$cumstart=ascat_nbaf$Position
+  #ascat_cnv$LOH=''; ascat_cnv$LOH[ascat_cnv$nMinor==0]='LOH' <---- will use ascat_LOH instead
+  for (i in 2:nrow(chrsz)) {
+    ix=ascat_tratio$Chr==chrsz$chr[i]
+    ascat_tratio$cumstart[ix]=ascat_tratio$Position[ix]+chrsz$starts[i]
+    #no n...
+    ix=ascat_tbaf$Chr==chrsz$chr[i]
+    ascat_tbaf$cumstart[ix]=ascat_tbaf$Position[ix]+chrsz$starts[i]
+    ix=ascat_nbaf$Chr==chrsz$chr[i]
+    ascat_nbaf$cumstart[ix]=ascat_nbaf$Position[ix]+chrsz$starts[i]
+  }
+ 
+
+  
+  # smooth data for view
+  ascat_binned=NULL
+  for (sample in samplename) for (i in 1:nrow(chrsz)) {
+    temp=data.table(
+      sample,
+      chr=chrsz$chr[i],
+      pos=seq(5e5,chrsz$length[i],5e5),
+      cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
+      tratio=NA,
+      tmaf=NA)
+    
+    tempLogR=ascat_tratio[sample][Chr==chrsz$chr[i]]
+    tempBAF=ascat_tbaf[sample][Chr==chrsz$chr[i]]
+    tempBAF$BAF=0.5+abs(tempBAF$BAF-0.5)
+    for (j in 1:nrow(temp)) {
+      ix = tempLogR$Position>temp$pos[j]-5e5 & tempLogR$Position<temp$pos[j]+5e5
+      if (sum(ix)>10) {
+        d <- density(2^tempLogR$LogR[ix],na.rm=T)
+        temp$tratio[j] <- d$x[which.max(d$y)]
+      }
+      ix = tempBAF$Position>temp$pos[j]-5e5 & tempBAF$Position<temp$pos[j]+5e5
+      if (sum(!is.na(tempBAF$BAF[ix]))>20) {
+        d=density(tempBAF$BAF[ix],na.rm=T)
+        temp$tmaf[j]=d$x[which.max(d$y)]
+      }
+    }
+    ascat_binned=rbind(ascat_binned,temp)
+  }
+  setkey(ascat_binned,'sample')
+
+  
+  ascat_loh=ascat_cnv[nMinor==0 & nMajor<4]
+  ascat_loh$chr=paste0('chr',ascat_loh$chr)
+  if (!exists('freec_loh')) freec_loh=ascat_loh # to make sure LOH is available if theres no freec
+  colnames(ascat_loh)[3:4]=c('start','end')
+  cnvs=ascat_cnv[nMajor+nMinor != 2] # this removes cnLOH
+  cnvs$length=paste0(round((cnvs$endpos-cnvs$startpos)/1e6,2),'M')
+  cnvs$rank_score <- 0
+  cnvs$rank_terms <- ''
+  cnvs$cancer_genes <- ''
+  
+  for (i in which(cnvs$endpos-cnvs$startpos < 50e6)) {
+    genes=tumorgenes[chr==cnvs$chr[i] & start<cnvs$end[i] & end>cnvs$start[i],`Gene Symbol`] # genes in segment
+    if (length(genes)>0) { # if any of our cancer genes
+      cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
+      if (any(genes %in% alltier1,na.rm = T)) {
+        cnvs$rank_score[i]=2
+        cnvs$rank_terms[i]='T1_gene'
+      } else if (any(genes %in% alltier2,na.rm = T)) {
+        cnvs$rank_score[i]=2
+        cnvs$rank_terms[i]='T2_gene'
+      }
+    }
+    
+    # if the effect is focal
+    if (cnvs[i,endpos-startpos]<3e6) {
+      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'focal')
+    }
+    
+    
+    
+    # if the effect is loss/gain/amp etc
+    if (cnvs[i,nMajor+nMinor]==0) {
+      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'hz_loss')
+    } else if (cnvs[i,nMajor+nMinor] > 5) {
+      cnvs$rank_score[i]=cnvs$rank_score[i]+2
+      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'high_amp')
+    } else if (cnvs[i,nMajor+nMinor] > 2) {
+      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'dup')
+    } else if (cnvs[i,nMajor+nMinor] < 2) {
+      cnvs$rank_score[i]=cnvs$rank_score[i]+1
+      cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
+    }
+  }
+  
+  ascat_cnv=cnvs[order(rank_score,decreasing = T)]
+  fwrite(ascat_cnv,file=paste0(csv_dir,'/',sampleData$name,'_ascat_cnv.csv'))
+
+  tableWrapper(ascat_cnv)
+}
+```
