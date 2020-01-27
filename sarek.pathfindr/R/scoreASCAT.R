@@ -24,7 +24,7 @@ ascat_files <- function() {
      "ascat_Tbaf_file" = ascat_Tbaf_file,
      "ascat_Nbaf_file" = ascat_Nbaf_file,
      "ascat_segment_file" = ascat_segment_file
-        )
+     )
 }
 
 score_ascat <- function() {
