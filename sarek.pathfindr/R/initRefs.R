@@ -1,6 +1,3 @@
-library(data.table)
-library(stringr)
-
 input_dir = "."
 csv_dir = "."
 chrsz = data.table(
@@ -28,7 +25,7 @@ baf = "the_BAF_file_bugger"
 logr = "the_logR_file_bugger"
 
 cat("Shaping tumor genes dataframe\n")
-tumorgenes=fread('~/reports/reference_data/small.cancer_gene_census.csv',key='Gene Symbol')
+tumorgenes=data.table::fread('~/reports/reference_data/cancer_gene_census.csv',key='Gene Symbol')
 tumorgenes$chr=paste0('chr',str_replace(string=tumorgenes$`Genome Location`,pattern = ':.*',replacement = ''))
 temp=str_replace(string=tumorgenes$`Genome Location`,pattern = '.*:',replacement = '')
 tumorgenes$start=as.numeric(str_replace(string=temp,pattern = '-.*',replacement = ''))
@@ -39,13 +36,11 @@ for (i in 1:nrow(chrsz)) {
   tumorgenes$cumstart[ix] <- tumorgenes$start[ix]+chrsz$starts[i]
   tumorgenes$cumend[ix] <- tumorgenes$end[ix]+chrsz$starts[i]
 }
-browser()
 cat("Merging locals\n")
-#local_tumorgenes=fread('~/reports/reference_data/2018_gene_list_tere_ref.csv',key='Gene')[Gene!='',1:2]
-local_tumorgenes = fread('~/reports/reference_data/2018_gene_list_tere_ref.csv',key='Gene')
+local_tumorgenes = data.table::fread('~/reports/reference_data/2018_gene_list_tere_ref.csv',key='Gene')
 # get rid of rows without a gene name
 local_tumorgenes = subset.data.frame(local_tumorgenes,local_tumorgenes$Gene!='')
-# selet only the gene names and the tier (a.k.a. score) 
+# select only the gene names and the tier (a.k.a. score) 
 local_tumorgenes = local_tumorgenes[,1:2]
 alltumorgenes=unique(c(tumorgenes$`Gene Symbol`,local_tumorgenes$Gene))
 cat("Creating tiers\n")

@@ -1,5 +1,3 @@
-library(data.table)
-
 ascat_files <- function() {
   ascat_result_files <- dir(recursive = T,full.names = T)
   file_names_to_remove = unique(c(grep(pattern = '.png', x = ascat_result_files),

@@ -44,8 +44,6 @@ load_ascat <- function(result_files) {
       cat("Loading tumor BAF\n")
       temp=fread(result_files["ascat_Tbaf_file"][s])[,-1]
       colnames(temp)[3]='BAF'
-      #browser()
-      #temp=temp[which(temp$BAF!=0 & temp$BAF!=1)]
       temp = subset.data.frame(temp,temp$BAF!=0 & temp$BAF !=1)
       temp$sample=samplename[s]
       temp=temp[order(temp$Chr,temp$Position),c(4,1:3)]
@@ -88,9 +86,6 @@ load_ascat <- function(result_files) {
         cumpos=seq(5e5,chrsz$length[i],5e5)+chrsz$starts[i],
         tratio=NA,
         tmaf=NA)
-      
-      #browser()
-      
       tempLogR = subset.data.frame(ascat_tratio,ascat_tratio$sample == sample & ascat_tratio$Chr == chrsz$chr[i])
       # tempLogR=ascat_tratio[sample][Chr==chrsz$chr[i]]
       tempBAF = subset.data.frame(ascat_tbaf,ascat_tbaf$sample == sample & ascat_tbaf$Chr == chrsz$chr[i])
@@ -134,14 +129,17 @@ load_ascat <- function(result_files) {
       focus_ends=subset.data.frame(focus_starts,focus_starts$end > cnvs$start[i])
       genes=focus_ends[,"Gene Symbol"]
       if (length(genes)>0) { # if any of our cancer genes
-        cnvs$cancer_genes[i] <- paste(genes,collapse = ' ') # put in table
+        cnvs$cancer_genes[i] <- paste(t(genes),collapse = ' ') # put in table
         if (any(genes %in% alltier1,na.rm = T)) {
           cnvs$rank_score[i]=2
           cnvs$rank_terms[i]='T1_gene'
         } else if (any(genes %in% alltier2,na.rm = T)) {
           cnvs$rank_score[i]=2
           cnvs$rank_terms[i]='T2_gene'
+        } else {
+          genes = " "
         }
+          
       }
       # if the effect is focal
       if ( cnvs$endpos[i]-cnvs$startpos[i]<3e6 ) {
@@ -164,9 +162,9 @@ load_ascat <- function(result_files) {
         cnvs$rank_terms[i]=paste(cnvs$rank_terms[i],'del')
       }
     }
-    cat("Writing CSV table\n")
-    browser()
     ascat_cnv=cnvs[order(cnvs$rank_score,decreasing = T),]
-    fwrite(ascat_cnv,file=paste0(csv_dir,'/',samplename,'_ascat_cnv.csv'))
+    csv_filename=paste0(csv_dir,'/',samplename,'_ascat_cnv.csv')
+    data.table::fwrite(ascat_cnv,file=csv_filename)
+    cat(paste0("Results written to CSV table ",getwd(),"/",csv_filename))
   }
 }
