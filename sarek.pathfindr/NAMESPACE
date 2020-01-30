@@ -2,3 +2,4 @@
 exportPattern("^[^\\.]")
 import(data.table)
 import(stringr)
+import(VariantAnnotation)
